@@ -35,9 +35,9 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         &[
             ("api_key", &config.api_key),
             ("url", &url.to_string()),
-            ("render_js", String::from("false")), // Disable JS rendering to save credits
-            ("block_ads", String::from("true")),  // Block ads  
-            ("block_resources", String::from("true")), // Block images/CSS to speed up request
+            ("render_js", &String::from("true")), // Disable JS rendering to save credits
+            ("block_ads", &String::from("true")),  // Block ads  
+            ("block_resources", &String::from("true")), // Block images/CSS to speed up request
         ]
     ).context("Failed to build API URL")?;
 
