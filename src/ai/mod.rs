@@ -45,7 +45,12 @@ pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedCont
         .message.content.clone()
         .context("No content in response")?;
 
-    let parsed: serde_json::Value = serde_json::from_str(&content)
+    // Clean the content string of any control characters before parsing
+    let cleaned_content = content.chars()
+        .filter(|c| !c.is_control() || *c == '\n' || *c == '\t')
+        .collect::<String>();
+
+    let parsed: serde_json::Value = serde_json::from_str(&cleaned_content)
         .context("Failed to parse OpenAI response as JSON")?;
 
     let filename = format!("{}.md", 
