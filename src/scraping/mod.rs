@@ -50,11 +50,13 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         .await
         .context("Failed to send request to ScrapingBee")?;
 
-    if !response.status().is_success() {
+    let status = response.status();
+    let text = response.text().await.context("Failed to get response text")?;
+
+    if !status.is_success() {
         let error_msg = format!(
             "ScrapingBee API error: {} - {}", 
-            response.status(),
-            response.text().await.unwrap_or_default()
+            status, text
         );
         logging::log(LogLevel::Error, &error_msg).await?;
         return Err(anyhow::anyhow!(error_msg));
@@ -62,13 +64,19 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
 
     logging::log(LogLevel::Info, "Successfully received response from ScrapingBee").await?;
 
-    // Parse response
-    let scraped = response
-        .json::<ScrapingBeeResponse>()
-        .await
-        .context("Failed to parse ScrapingBee response")?;
-
-    Ok(scraped.body)
+    // Try to parse as JSON first
+    match serde_json::from_str::<ScrapingBeeResponse>(&text) {
+        Ok(scraped) => Ok(scraped.body),
+        Err(e) => {
+            // If JSON parsing fails, check if we got HTML directly
+            if text.trim().starts_with("<") {
+                Ok(text)
+            } else {
+                logging::log(LogLevel::Error, &format!("Failed to parse response: {}", e)).await?;
+                Err(anyhow::anyhow!("Failed to parse ScrapingBee response"))
+            }
+        }
+    }
 }
 
 pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Result<Vec<(String, String)>> {
