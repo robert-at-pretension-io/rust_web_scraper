@@ -18,7 +18,7 @@ struct SearchParams {
 
 pub async fn start_server(pool: Arc<SqlitePool>) {
     let app = Router::new()
-        .route("/", get(|| async { Html("Welcome to Web Scraper") }))
+        .route("/", get(|| async { Html("Welcome to Web Scraper") documents}))
         .route("/documents", get(list_documents))
         .route("/search", get(search_page))
         .layer(CorsLayer::permissive())
