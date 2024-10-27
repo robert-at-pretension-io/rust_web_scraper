@@ -1,5 +1,8 @@
+use std::sync::Arc;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode};
+use sqlx::SqlitePool;
+use crate::{db, logging::{self, LogLevel}, scraping};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -109,6 +112,10 @@ impl App {
             selected_documents_item: 0,
             is_in_documents_submenu: false,
             help_text: String::from("Use ↑↓ to navigate, Enter to select, q to quit"),
+            pool,
+            scraping_config,
+            progress: 0.0,
+            progress_message: String::new(),
         }
     }
 
@@ -140,7 +147,7 @@ impl App {
 
     pub fn run(&mut self) -> Result<()> {
         // Setup terminal
-        let mut terminal = ratatui::init();
+        let mut terminal = ratatui::init()?;
 
         // Main loop
         loop {
@@ -154,7 +161,7 @@ impl App {
         }
 
         // Restore terminal
-        ratatui::restore();
+        ratatui::restore()?;
         Ok(())
     }
 

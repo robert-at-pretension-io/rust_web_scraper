@@ -10,6 +10,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     // Create schema.sql file
     let schema_sql = r#"
+CREATE TABLE IF NOT EXISTS application_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
