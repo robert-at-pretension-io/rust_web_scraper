@@ -10,6 +10,7 @@ pub struct Document {
     pub url: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[sqlx(try_from = "Vec<u8>")]
     pub vector_embedding: Option<Vec<f32>>,
 }
 
@@ -27,4 +28,7 @@ pub struct SearchResult {
     pub document_id: i64,
     pub relevance_score: f32,
     pub created_at: DateTime<Utc>,
+    pub url: String,
+    pub title: String,
+    pub content: String,
 }

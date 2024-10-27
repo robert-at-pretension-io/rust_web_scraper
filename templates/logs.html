@@ -29,7 +29,7 @@
         </thead>
         <tbody>
             {% for log in logs %}
-            <tr class="{% if log.level == 'ERROR' %}table-danger{% elif log.level == 'WARNING' %}table-warning{% endif %}">
+            <tr class="{% if log.level == 'ERROR' %}table-danger{% else if log.level == 'WARNING' %}table-warning{% endif %}">
                 <td>{{ log.created_at }}</td>
                 <td>{{ log.level }}</td>
                 <td>{{ log.message }}</td>

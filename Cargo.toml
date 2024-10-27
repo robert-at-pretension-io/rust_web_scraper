@@ -7,7 +7,7 @@ edition = "2021"
 # existing dependencies...
 reqwest = { version = "0.11", features = ["json"] }
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "json", "chrono"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "json", "chrono", "time"] }
 tokio = { version = "1.0", features = ["full"] }
 
 # TUI
@@ -25,4 +25,4 @@ serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 dotenv = "0.15.0"
-askama = "0.12"
+askama = { version = "0.12", features = ["with-axum"] }

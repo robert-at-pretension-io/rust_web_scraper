@@ -1,8 +1,9 @@
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     response::Html,
     routing::get,
     Router,
+    debug_handler,
 };
 use askama::Template;
 use serde::Deserialize;
@@ -55,9 +56,10 @@ pub async fn start_server(pool: Arc<SqlitePool>) {
     axum::serve(listener, app).await.unwrap();
 }
 
+#[debug_handler]
 async fn list_documents(
     Query(params): Query<SearchParams>,
-    pool: Arc<SqlitePool>,
+    State(pool): State<Arc<SqlitePool>>,
 ) -> Html<String> {
     let query = params.q.unwrap_or_default();
     
@@ -89,9 +91,10 @@ async fn list_documents(
     Html(template.render().unwrap_or_else(|_| String::from("Template error")))
 }
 
+#[debug_handler]
 async fn search_page(
     Query(params): Query<SearchParams>,
-    pool: Arc<SqlitePool>,
+    State(pool): State<Arc<SqlitePool>>,
 ) -> Html<String> {
     let query = params.q.unwrap_or_default();
     
@@ -123,9 +126,10 @@ async fn search_page(
     Html(template.render().unwrap_or_else(|_| String::from("Template error")))
 }
 
+#[debug_handler]
 async fn view_logs(
     Query(params): Query<SearchParams>,
-    pool: Arc<SqlitePool>,
+    State(pool): State<Arc<SqlitePool>>,
 ) -> Html<String> {
     let query = params.q.unwrap_or_default();
     let level = params.level.unwrap_or_default();
