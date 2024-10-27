@@ -19,14 +19,16 @@ impl ToString for LogLevel {
 }
 
 pub async fn log(pool: &SqlitePool, level: LogLevel, message: &str) -> Result<()> {
+    let level_str = level.to_string();
+    let now = Utc::now();
     sqlx::query!(
         r#"
         INSERT INTO application_logs (level, message, created_at)
         VALUES ($1, $2, $3)
         "#,
-        level.to_string(),
+        level_str,
         message,
-        Utc::now(),
+        now,
     )
     .execute(pool)
     .await?;

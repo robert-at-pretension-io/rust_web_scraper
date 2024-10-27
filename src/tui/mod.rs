@@ -147,7 +147,7 @@ impl App {
 
     pub fn run(&mut self) -> Result<()> {
         // Setup terminal
-        let mut terminal = ratatui::init()?;
+        let mut terminal = ratatui::init().expect("Failed to initialize terminal");
 
         // Main loop
         loop {
@@ -161,7 +161,7 @@ impl App {
         }
 
         // Restore terminal
-        ratatui::restore()?;
+        ratatui::restore().expect("Failed to restore terminal");
         Ok(())
     }
 
