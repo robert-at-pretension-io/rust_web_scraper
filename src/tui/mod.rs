@@ -35,7 +35,7 @@ impl App {
 
     pub fn run(&mut self) -> Result<()> {
         // Setup terminal
-        let mut terminal = ratatui::init()?;
+        let mut terminal = ratatui::init();
 
         // Main loop
         loop {
@@ -49,7 +49,7 @@ impl App {
         }
 
         // Restore terminal
-        ratatui::restore()?;
+        ratatui::restore();
         Ok(())
     }
 
