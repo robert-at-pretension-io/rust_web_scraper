@@ -1,6 +1,5 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
-use crate::models::Document;
 use chrono::Utc;
 
 pub async fn store_document(url: &str, content: &str, pool: &SqlitePool) -> Result<i64> {

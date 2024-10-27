@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let scraping_config = scraping::ScrapingConfig::new()?;
     
     // Create channels for communication between TUI and web server
-    let (tx, _rx) = mpsc::channel::<String>(32);
+    let (_tx, _rx) = mpsc::channel::<String>(32);
     
     // Start web server in background task
     tokio::spawn(web::start_server());

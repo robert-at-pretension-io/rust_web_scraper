@@ -2,7 +2,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode};
 use sqlx::SqlitePool;
-use crate::{db, logging::{self, LogLevel}, scraping};
+use crate::{db, logging, scraping}; 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -147,7 +147,10 @@ impl App {
 
     pub fn run(&mut self) -> Result<()> {
         // Setup terminal
-        let mut terminal = ratatui::init().expect("Failed to initialize terminal");
+        let mut terminal = match ratatui::init() {
+            Ok(t) => t,
+            Err(e) => return Err(anyhow::anyhow!("Failed to initialize terminal: {}", e)),
+        };
 
         // Main loop
         loop {
@@ -161,7 +164,9 @@ impl App {
         }
 
         // Restore terminal
-        ratatui::restore().expect("Failed to restore terminal");
+        if let Err(e) = ratatui::restore() {
+            return Err(anyhow::anyhow!("Failed to restore terminal: {}", e));
+        }
         Ok(())
     }
 
