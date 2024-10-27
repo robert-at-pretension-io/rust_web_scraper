@@ -48,6 +48,7 @@ async fn list_documents(
         .await
         .unwrap_or_default()
     } else {
+        let like_pattern = format!("%{}%", query);
         sqlx::query_as!(
             crate::models::Document,
             r#"SELECT id, title, content, url, created_at as "created_at: chrono::DateTime<Utc>",
@@ -55,8 +56,8 @@ async fn list_documents(
                FROM documents 
                WHERE title LIKE ? OR content LIKE ? 
                ORDER BY created_at DESC LIMIT 100"#,
-            format!("%{}%", query),
-            format!("%{}%", query)
+            like_pattern,
+            like_pattern
         )
         .fetch_all(&*pool)
         .await
