@@ -66,7 +66,7 @@ async fn list_documents(
     let documents = if query.is_empty() {
         sqlx::query_as!(
             crate::models::Document,
-            "SELECT * FROM documents ORDER BY created_at DESC LIMIT 100"
+            "SELECT id, title, content, url, created_at, updated_at FROM documents ORDER BY created_at DESC LIMIT 100"
         )
         .fetch_all(&*pool)
         .await
@@ -74,7 +74,7 @@ async fn list_documents(
     } else {
         sqlx::query_as!(
             crate::models::Document,
-            "SELECT * FROM documents WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 100",
+            "SELECT id, title, content, url, created_at, updated_at FROM documents WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 100",
             format!("%{}%", query),
             format!("%{}%", query)
         )
