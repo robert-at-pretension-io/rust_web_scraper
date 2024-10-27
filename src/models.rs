@@ -1,19 +1,6 @@
-[package]
-name = "web_scraper"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
-sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "chrono"] }
-dotenv = "0.15"
-async-openai = "0.16"
-slug = "0.1"
+use serde::{Serialize, Deserialize};
+use sqlx::FromRow;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Document {
