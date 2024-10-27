@@ -10,9 +10,9 @@
         <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Search logs...">
         <select class="form-select" name="level" style="max-width: 150px;">
             <option value="">All Levels</option>
-            <option value="INFO" {% if level == "INFO" %}selected{% endif %}>Info</option>
-            <option value="WARNING" {% if level == "WARNING" %}selected{% endif %}>Warning</option>
-            <option value="ERROR" {% if level == "ERROR" %}selected{% endif %}>Error</option>
+            <option value="INFO" {% if level == "INFO" %}selected="selected"{% endif %}>Info</option>
+            <option value="WARNING" {% if level == "WARNING" %}selected="selected"{% endif %}>Warning</option>
+            <option value="ERROR" {% if level == "ERROR" %}selected="selected"{% endif %}>Error</option>
         </select>
         <button class="btn btn-primary" type="submit">Search</button>
     </div>
