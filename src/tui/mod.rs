@@ -33,7 +33,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(pool: Arc<SqlitePool>, scraping_config: scraping::ScrapingConfig) -> Self {
         Self {
             menu_items: vec![
                 MenuItem::Documents(None),
