@@ -7,7 +7,7 @@ edition = "2021"
 # existing dependencies...
 reqwest = { version = "0.11", features = ["json"] }
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json", "chrono"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "json", "chrono"] }
 tokio = { version = "1.0", features = ["full"] }
 
 # TUI
@@ -24,3 +24,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
+dotenv = "0.15.0"
