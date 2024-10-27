@@ -9,6 +9,9 @@ use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize scraping config
+    let scraping_config = scraping::ScrapingConfig::new()?;
+    
     // Create channels for communication between TUI and web server
     let (tx, _rx) = mpsc::channel::<String>(32);
     

@@ -1,14 +1,23 @@
 use anyhow::{Result, Context};
 use reqwest::Url;
 use serde::Deserialize;
+use std::env;
+use dotenv::dotenv;
 
 pub struct ScrapingConfig {
     api_key: String,
 }
 
 impl ScrapingConfig {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new() -> Result<Self> {
+        dotenv().ok();
+        let api_key = env::var("SCRAPING_BEE_API_KEY")
+            .context("SCRAPING_BEE_API_KEY must be set in environment")?;
+        Ok(Self { api_key })
+    }
+
+    pub fn with_key(api_key: String) -> Self {
+        Self { api_key } 
     }
 }
 
