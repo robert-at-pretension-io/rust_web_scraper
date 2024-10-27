@@ -3,49 +3,23 @@ use axum::{
     response::Html,
     routing::get,
     Router,
-    debug_handler,
 };
-use askama::Template;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-#[derive(Template)]
-#[template(path = "documents.html")]
-struct DocumentsTemplate {
-    documents: Vec<crate::models::Document>,
-    query: String,
-}
-
-#[derive(Template)]
-#[template(path = "logs.html")]
-struct LogsTemplate {
-    logs: Vec<(String, String, String)>,
-    query: String,
-    level: String,
-}
-
-#[derive(Template)]
-#[template(path = "search.html")]
-struct SearchTemplate {
-    results: Vec<crate::models::SearchResult>,
-    query: String,
-}
-
 #[derive(Deserialize)]
 struct SearchParams {
     q: Option<String>,
-    level: Option<String>,
 }
 
 pub async fn start_server(pool: Arc<SqlitePool>) {
     let app = Router::new()
-        .route("/", get(|| async { axum::response::Redirect::to("/documents") }))
+        .route("/", get(|| async { Html("Welcome to Web Scraper") }))
         .route("/documents", get(list_documents))
         .route("/search", get(search_page))
-        .route("/logs", get(view_logs))
         .layer(CorsLayer::permissive())
         .with_state(pool);
 
@@ -56,7 +30,6 @@ pub async fn start_server(pool: Arc<SqlitePool>) {
     axum::serve(listener, app).await.unwrap();
 }
 
-#[debug_handler]
 async fn list_documents(
     Query(params): Query<SearchParams>,
     State(pool): State<Arc<SqlitePool>>,
@@ -66,7 +39,9 @@ async fn list_documents(
     let documents = if query.is_empty() {
         sqlx::query_as!(
             crate::models::Document,
-            "SELECT id, title, content, url, created_at, updated_at FROM documents ORDER BY created_at DESC LIMIT 100"
+            r#"SELECT id, title, content, url, created_at as "created_at: chrono::DateTime<Utc>",
+               updated_at as "updated_at: chrono::DateTime<Utc>"
+               FROM documents ORDER BY created_at DESC LIMIT 100"#
         )
         .fetch_all(&*pool)
         .await
@@ -74,7 +49,11 @@ async fn list_documents(
     } else {
         sqlx::query_as!(
             crate::models::Document,
-            "SELECT id, title, content, url, created_at, updated_at FROM documents WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT 100",
+            r#"SELECT id, title, content, url, created_at as "created_at: chrono::DateTime<Utc>",
+               updated_at as "updated_at: chrono::DateTime<Utc>"
+               FROM documents 
+               WHERE title LIKE ? OR content LIKE ? 
+               ORDER BY created_at DESC LIMIT 100"#,
             format!("%{}%", query),
             format!("%{}%", query)
         )
@@ -83,47 +62,83 @@ async fn list_documents(
         .unwrap_or_default()
     };
 
-    let template = DocumentsTemplate {
-        documents,
-        query,
-    };
-    
-    Html(template.render().unwrap_or_else(|_| String::from("Template error")))
+    // Simple HTML response
+    let mut html = String::from(r#"
+        <html>
+            <head><title>Documents</title></head>
+            <body>
+                <h1>Cached Documents</h1>
+                <form method="get">
+                    <input type="text" name="q" value="">
+                    <button type="submit">Search</button>
+                </form>
+                <table border="1">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>URL</th>
+                        <th>Created</th>
+                    </tr>
+    "#);
+
+    for doc in documents {
+        html.push_str(&format!(r#"
+            <tr>
+                <td>{}</td>
+                <td>{}</td>
+                <td><a href="{}" target="_blank">{}</a></td>
+                <td>{}</td>
+            </tr>
+        "#, doc.id, doc.title, doc.url, doc.url, doc.created_at));
+    }
+
+    html.push_str("</table></body></html>");
+    Html(html)
 }
 
-#[debug_handler]
 async fn search_page(
     Query(params): Query<SearchParams>,
     State(pool): State<Arc<SqlitePool>>,
 ) -> Html<String> {
     let query = params.q.unwrap_or_default();
     
-    let results = if !query.is_empty() {
-        sqlx::query_as!(
-            crate::models::SearchResult,
-            r#"
-            SELECT sr.* 
-            FROM search_results sr
-            JOIN search_queries sq ON sr.query_id = sq.id
-            WHERE sq.query = ?
-            ORDER BY sr.relevance_score DESC
-            LIMIT 20
-            "#,
-            query
+    let mut html = String::from(r#"
+        <html>
+            <head><title>Search</title></head>
+            <body>
+                <h1>Search Documents</h1>
+                <form method="get">
+                    <input type="text" name="q" value="">
+                    <button type="submit">Search</button>
+                </form>
+    "#);
+
+    if !query.is_empty() {
+        let results = sqlx::query!(
+            r#"SELECT d.id, d.title, d.content, d.url, d.created_at
+               FROM documents d
+               WHERE d.title LIKE ? OR d.content LIKE ?
+               ORDER BY d.created_at DESC LIMIT 10"#,
+            format!("%{}%", query),
+            format!("%{}%", query)
         )
         .fetch_all(&*pool)
         .await
-        .unwrap_or_default()
-    } else {
-        Vec::new()
-    };
+        .unwrap_or_default();
 
-    let template = SearchTemplate {
-        results,
-        query,
-    };
-    
-    Html(template.render().unwrap_or_else(|_| String::from("Template error")))
+        for result in results {
+            html.push_str(&format!(r#"
+                <div style="margin: 20px 0; padding: 10px; border-left: 3px solid blue;">
+                    <h3><a href="{}" target="_blank">{}</a></h3>
+                    <p>{}</p>
+                    <small>ID: {} | Created: {}</small>
+                </div>
+            "#, result.url, result.title, result.content, result.id, result.created_at));
+        }
+    }
+
+    html.push_str("</body></html>");
+    Html(html)
 }
 
 #[debug_handler]
