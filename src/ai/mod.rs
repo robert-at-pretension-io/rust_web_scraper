@@ -41,6 +41,9 @@ async fn get_markdown_content(html: &str) -> Result<String> {
         .message.content.clone()
         .context("No content in response")?;
 
+    // Log the interaction
+    crate::logging::log_openai_interaction(html, &content).await?;
+
     Ok(content.trim().to_string())
 }
 
@@ -69,6 +72,9 @@ async fn get_filename(html: &str) -> Result<String> {
         .context("No response from OpenAI")?
         .message.content.clone()
         .context("No content in response")?;
+
+    // Log the interaction
+    crate::logging::log_openai_interaction(html, &filename).await?;
 
     Ok(slugify(&filename.trim()))
 }
