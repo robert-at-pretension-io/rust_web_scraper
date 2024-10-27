@@ -115,22 +115,43 @@ impl App {
             .block(Block::default().borders(Borders::ALL));
         frame.render_widget(title, chunks[0]);
 
-        let items: Vec<ListItem> = self
-            .menu_items
-            .iter()
-            .enumerate()
-            .map(|(i, item)| {
-                let style = if i == self.selected_item {
-                    Style::default().fg(Color::Yellow)
-                } else {
-                    Style::default()
-                };
-                ListItem::new(format!("{:?}", item)).style(style)
-            })
-            .collect();
+        let items: Vec<ListItem> = if self.is_in_documents_submenu {
+            self.documents_menu_items
+                .iter()
+                .enumerate()
+                .map(|(i, item)| {
+                    let style = if i == self.selected_documents_item {
+                        Style::default().fg(Color::Yellow)
+                    } else {
+                        Style::default()
+                    };
+                    ListItem::new(format!("{:?}", item)).style(style)
+                })
+                .collect()
+        } else {
+            self.menu_items
+                .iter()
+                .enumerate()
+                .map(|(i, item)| {
+                    let style = if i == self.selected_item {
+                        Style::default().fg(Color::Yellow)
+                    } else {
+                        Style::default()
+                    };
+                    ListItem::new(format!("{:?}", item)).style(style)
+                })
+                .collect()
+        };
 
-        let menu = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Menu"));
+        let menu = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(if self.is_in_documents_submenu {
+                    "Documents Menu"
+                } else {
+                    "Main Menu"
+                }),
+        );
         frame.render_widget(menu, chunks[1]);
 
         let status = Paragraph::new("Press q to quit")
@@ -144,10 +165,27 @@ impl App {
             match key.code {
                 KeyCode::Char('q') => return Ok(true),
                 KeyCode::Up => {
-                    self.selected_item = self.selected_item.saturating_sub(1);
+                    if self.is_in_documents_submenu {
+                        self.selected_documents_item = self.selected_documents_item.saturating_sub(1);
+                    } else {
+                        self.selected_item = self.selected_item.saturating_sub(1);
+                    }
                 }
                 KeyCode::Down => {
-                    self.selected_item = (self.selected_item + 1).min(self.menu_items.len() - 1);
+                    if self.is_in_documents_submenu {
+                        self.selected_documents_item = (self.selected_documents_item + 1)
+                            .min(self.documents_menu_items.len() - 1);
+                    } else {
+                        self.selected_item = (self.selected_item + 1).min(self.menu_items.len() - 1);
+                    }
+                }
+                KeyCode::Enter => {
+                    if !self.is_in_documents_submenu {
+                        if let MenuItem::Documents(_) = &self.menu_items[self.selected_item] {
+                            self.is_in_documents_submenu = true;
+                            self.selected_documents_item = 0;
+                        }
+                    }
                 }
                 _ => {}
             }
