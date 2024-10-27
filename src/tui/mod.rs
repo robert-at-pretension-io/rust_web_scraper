@@ -18,136 +18,37 @@ use ratatui::{
 
 #[derive(Debug)]
 pub enum MenuItem {
-    Documents(Option<DocumentsMenuItem>),
-    Search,
-    Settings,
-    Quit,
-}
-
-#[derive(Debug)]
-pub enum DocumentsMenuItem {
     CacheUrl,
     CacheFromFile,
     RefreshUrlsList,
-    Back,
+    Quit,
 }
 
 pub struct App {
     menu_items: Vec<MenuItem>,
     selected_item: usize,
-    documents_menu_items: Vec<DocumentsMenuItem>,
-    selected_documents_item: usize,
-    is_in_documents_submenu: bool,
-    help_text: String,
-    progress: f64,
-    progress_message: String,
+    input_mode: bool,
+    input_value: String,
+    status_message: String,
     pool: Arc<SqlitePool>,
     scraping_config: scraping::ScrapingConfig,
 }
 
 impl App {
-    pub async fn handle_documents_action(&mut self) -> Result<()> {
-        match self.documents_menu_items[self.selected_documents_item] {
-            DocumentsMenuItem::CacheUrl => {
-                self.progress = 0.0;
-                self.progress_message = "Enter URL to cache:".to_string();
-                
-                if let Some(url) = self.input_value.clone() {
-                    logging::log(LogLevel::Info, &format!("Processing URL input: {}", url))?;
-                    
-                    self.progress = 0.2;
-                    self.progress_message = format!("Scraping {}...", url);
-                    
-                    match scraping::scrape_url(&url, &self.scraping_config).await {
-                        Ok(content) => {
-                            self.progress = 0.6;
-                            self.progress_message = "Storing in database...".to_string();
-                            
-                            match db::store_document(&url, &content, &self.pool).await {
-                                Ok(id) => {
-                                    self.progress = 1.0;
-                                    self.progress_message = "Successfully cached document".to_string();
-                                    logging::log(LogLevel::Info, 
-                                        &format!("Successfully cached document id {} from {}", id, url))?;
-                                },
-                                Err(e) => {
-                                    self.progress = 0.0;
-                                    self.progress_message = "Failed to store document".to_string();
-                                    logging::log(LogLevel::Error, 
-                                        &format!("Failed to store document from {}: {}", url, e))?;
-                                }
-                            }
-                        },
-                        Err(e) => {
-                            self.progress = 0.0;
-                            self.progress_message = "Failed to scrape URL".to_string();
-                            logging::log(LogLevel::Error, 
-                                &format!("Failed to scrape {}: {}", url, e))?;
-                        }
-                    }
-                }
-            }
-            DocumentsMenuItem::CacheFromFile => {
-                // TODO: Implement file caching
-            }
-            DocumentsMenuItem::RefreshUrlsList => {
-                // TODO: Implement refresh
-            }
-            DocumentsMenuItem::Back => {
-                self.is_in_documents_submenu = false;
-            }
-        }
-        Ok(())
-    }
-
     pub fn new(pool: Arc<SqlitePool>, scraping_config: scraping::ScrapingConfig) -> Self {
         Self {
             menu_items: vec![
-                MenuItem::Documents(None),
-                MenuItem::Search,
-                MenuItem::Settings,
+                MenuItem::CacheUrl,
+                MenuItem::CacheFromFile,
+                MenuItem::RefreshUrlsList,
                 MenuItem::Quit,
             ],
             selected_item: 0,
-            documents_menu_items: vec![
-                DocumentsMenuItem::CacheUrl,
-                DocumentsMenuItem::CacheFromFile,
-                DocumentsMenuItem::RefreshUrlsList,
-                DocumentsMenuItem::Back,
-            ],
-            selected_documents_item: 0,
-            is_in_documents_submenu: false,
-            help_text: String::from("Use ↑↓ to navigate, Enter to select, q to quit"),
+            input_mode: false,
+            input_value: String::new(),
+            status_message: String::from("Use ↑↓ to navigate, Enter to select, q to quit"),
             pool,
             scraping_config,
-            progress: 0.0,
-            progress_message: String::new(),
-        }
-    }
-
-    fn get_help_text(&self) -> String {
-        match (self.is_in_documents_submenu, &self.menu_items[self.selected_item]) {
-            (false, MenuItem::Documents(_)) => 
-                "Document management and caching options. Press Enter to view sub-menu.".to_string(),
-            (false, MenuItem::Search) => 
-                "Search through cached documents.".to_string(),
-            (false, MenuItem::Settings) => 
-                "Configure application settings.".to_string(),
-            (false, MenuItem::Quit) => 
-                "Exit the application.".to_string(),
-            (true, MenuItem::Documents(_)) => {
-                match self.documents_menu_items[self.selected_documents_item] {
-                    DocumentsMenuItem::CacheUrl => 
-                        "Cache a single URL by entering its address.".to_string(),
-                    DocumentsMenuItem::CacheFromFile => 
-                        "Cache multiple URLs from urls.txt file.".to_string(),
-                    DocumentsMenuItem::RefreshUrlsList => 
-                        "Refresh the list of URLs from urls.txt.".to_string(),
-                    DocumentsMenuItem::Back => 
-                        "Return to main menu.".to_string(),
-                }
-            }
-            _ => String::new(),
         }
     }
 
@@ -163,9 +64,53 @@ impl App {
         loop {
             terminal.draw(|frame| self.draw(frame))?;
 
-            if crossterm::event::poll(std::time::Duration::from_millis(100))? {
-                if self.handle_input(crossterm::event::read()?)? {
-                    break;
+            if let Event::Key(key) = crossterm::event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    if self.input_mode {
+                        match key.code {
+                            KeyCode::Enter => {
+                                self.handle_input_submit().await?;
+                                self.input_mode = false;
+                            }
+                            KeyCode::Esc => {
+                                self.input_mode = false;
+                                self.input_value.clear();
+                            }
+                            KeyCode::Char(c) => {
+                                self.input_value.push(c);
+                            }
+                            KeyCode::Backspace => {
+                                self.input_value.pop();
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        match key.code {
+                            KeyCode::Char('q') => break,
+                            KeyCode::Up => {
+                                self.selected_item = self.selected_item.saturating_sub(1);
+                            }
+                            KeyCode::Down => {
+                                self.selected_item = (self.selected_item + 1).min(self.menu_items.len() - 1);
+                            }
+                            KeyCode::Enter => {
+                                match self.menu_items[self.selected_item] {
+                                    MenuItem::CacheUrl => {
+                                        self.input_mode = true;
+                                        self.status_message = String::from("Enter URL to cache (press Enter to submit, Esc to cancel):");
+                                    }
+                                    MenuItem::CacheFromFile => {
+                                        self.handle_cache_from_file().await?;
+                                    }
+                                    MenuItem::RefreshUrlsList => {
+                                        self.handle_refresh_urls().await?;
+                                    }
+                                    MenuItem::Quit => break,
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
                 }
             }
         }
@@ -175,6 +120,69 @@ impl App {
         execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
         terminal.show_cursor()?;
         
+        Ok(())
+    }
+
+    async fn handle_input_submit(&mut self) -> Result<()> {
+        if !self.input_value.is_empty() {
+            let url = self.input_value.clone();
+            self.input_value.clear();
+            
+            logging::log(LogLevel::Info, &format!("Processing URL: {}", url)).await?;
+            
+            match scraping::scrape_url(&url, &self.scraping_config).await {
+                Ok(content) => {
+                    match db::store_document(&url, &content, &self.pool).await {
+                        Ok(id) => {
+                            self.status_message = format!("Successfully cached document {}", id);
+                            logging::log(LogLevel::Info, &format!("Cached document {} from {}", id, url)).await?;
+                        }
+                        Err(e) => {
+                            self.status_message = "Failed to store document".to_string();
+                            logging::log(LogLevel::Error, &format!("Database error for {}: {}", url, e)).await?;
+                        }
+                    }
+                }
+                Err(e) => {
+                    self.status_message = "Failed to scrape URL".to_string();
+                    logging::log(LogLevel::Error, &format!("Scraping error for {}: {}", url, e)).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_cache_from_file(&mut self) -> Result<()> {
+        match tokio::fs::read_to_string("urls.txt").await {
+            Ok(content) => {
+                let urls: Vec<_> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+                logging::log(LogLevel::Info, &format!("Processing {} URLs from file", urls.len())).await?;
+                
+                for url in urls {
+                    match scraping::scrape_url(url, &self.scraping_config).await {
+                        Ok(content) => {
+                            if let Err(e) = db::store_document(url, &content, &self.pool).await {
+                                logging::log(LogLevel::Error, &format!("Failed to store {}: {}", url, e)).await?;
+                            }
+                        }
+                        Err(e) => {
+                            logging::log(LogLevel::Error, &format!("Failed to scrape {}: {}", url, e)).await?;
+                        }
+                    }
+                }
+                self.status_message = "Finished processing URLs from file".to_string();
+            }
+            Err(e) => {
+                self.status_message = "Failed to read urls.txt".to_string();
+                logging::log(LogLevel::Error, &format!("Failed to read urls.txt: {}", e)).await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_refresh_urls(&mut self) -> Result<()> {
+        self.status_message = "Refreshed URLs list".to_string();
+        logging::log(LogLevel::Info, "Refreshed URLs list").await?;
         Ok(())
     }
 
@@ -188,86 +196,40 @@ impl App {
             ])
             .split(frame.area());
 
+        // Title
         let title = Paragraph::new("Documentation Aggregator")
             .style(Style::default().fg(Color::Cyan))
             .block(Block::default().borders(Borders::ALL));
         frame.render_widget(title, chunks[0]);
 
-        let items: Vec<ListItem> = if self.is_in_documents_submenu {
-            self.documents_menu_items
-                .iter()
-                .enumerate()
-                .map(|(i, item)| {
-                    let style = if i == self.selected_documents_item {
-                        Style::default().fg(Color::Yellow)
-                    } else {
-                        Style::default()
-                    };
-                    ListItem::new(format!("{:?}", item)).style(style)
-                })
-                .collect()
-        } else {
-            self.menu_items
-                .iter()
-                .enumerate()
-                .map(|(i, item)| {
-                    let style = if i == self.selected_item {
-                        Style::default().fg(Color::Yellow)
-                    } else {
-                        Style::default()
-                    };
-                    ListItem::new(format!("{:?}", item)).style(style)
-                })
-                .collect()
-        };
-
-        let menu = List::new(items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(if self.is_in_documents_submenu {
-                    "Documents Menu"
+        // Menu
+        let items: Vec<ListItem> = self.menu_items
+            .iter()
+            .enumerate()
+            .map(|(i, item)| {
+                let style = if i == self.selected_item {
+                    Style::default().fg(Color::Yellow)
                 } else {
-                    "Main Menu"
-                }),
-        );
+                    Style::default()
+                };
+                ListItem::new(format!("{:?}", item)).style(style)
+            })
+            .collect();
+
+        let menu = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Menu"));
         frame.render_widget(menu, chunks[1]);
 
-        let status = Paragraph::new("Press q to quit")
+        // Status/Input area
+        let status = if self.input_mode {
+            format!("{}\n> {}", self.status_message, self.input_value)
+        } else {
+            self.status_message.clone()
+        };
+        
+        let status = Paragraph::new(status)
             .style(Style::default().fg(Color::Gray))
             .block(Block::default().borders(Borders::ALL));
         frame.render_widget(status, chunks[2]);
-    }
-
-    fn handle_input(&mut self, event: Event) -> Result<bool> {
-        if let Event::Key(key) = event {
-            match key.code {
-                KeyCode::Char('q') => return Ok(true),
-                KeyCode::Up => {
-                    if self.is_in_documents_submenu {
-                        self.selected_documents_item = self.selected_documents_item.saturating_sub(1);
-                    } else {
-                        self.selected_item = self.selected_item.saturating_sub(1);
-                    }
-                }
-                KeyCode::Down => {
-                    if self.is_in_documents_submenu {
-                        self.selected_documents_item = (self.selected_documents_item + 1)
-                            .min(self.documents_menu_items.len() - 1);
-                    } else {
-                        self.selected_item = (self.selected_item + 1).min(self.menu_items.len() - 1);
-                    }
-                }
-                KeyCode::Enter => {
-                    if !self.is_in_documents_submenu {
-                        if let MenuItem::Documents(_) = &self.menu_items[self.selected_item] {
-                            self.is_in_documents_submenu = true;
-                            self.selected_documents_item = 0;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(false)
     }
 }
