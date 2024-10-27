@@ -1,7 +1,6 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use chrono::Utc;
-use sqlx::SqlitePool;
 use anyhow::Result;
 
 pub enum LogLevel {

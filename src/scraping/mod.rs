@@ -28,11 +28,11 @@ struct ScrapingBeeResponse {
 }
 
 pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
-    logging::log(LogLevel::Info, &format!("Starting to scrape URL: {}", url))?;
+    logging::log(LogLevel::Info, &format!("Starting to scrape URL: {}", url)).await?;
     
     let client = reqwest::Client::new();
     
-    logging::log(LogLevel::Info, "Building ScrapingBee API URL")?;
+    logging::log(LogLevel::Info, "Building ScrapingBee API URL").await?;
     let api_url = Url::parse_with_params(
         "https://app.scrapingbee.com/api/v1/", 
         &[
@@ -44,7 +44,7 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         ]
     ).context("Failed to build API URL")?;
 
-    logging::log(LogLevel::Info, "Sending request to ScrapingBee API")?;
+    logging::log(LogLevel::Info, "Sending request to ScrapingBee API").await?;
     let response = client.get(api_url)
         .send()
         .await
@@ -56,11 +56,11 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
             response.status(),
             response.text().await.unwrap_or_default()
         );
-        logging::log(LogLevel::Error, &error_msg)?;
+        logging::log(LogLevel::Error, &error_msg).await?;
         return Err(anyhow::anyhow!(error_msg));
     }
 
-    logging::log(LogLevel::Info, "Successfully received response from ScrapingBee")?;
+    logging::log(LogLevel::Info, "Successfully received response from ScrapingBee").await?;
 
     // Parse response
     let scraped = response
@@ -72,7 +72,7 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
 }
 
 pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Result<Vec<(String, String)>> {
-    logging::log(LogLevel::Info, &format!("Reading URLs from file: {}", path))?;
+    logging::log(LogLevel::Info, &format!("Reading URLs from file: {}", path)).await?;
     
     let content = tokio::fs::read_to_string(path).await
         .context("Failed to read URLs file")?;
@@ -82,24 +82,24 @@ pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Resul
         .filter(|line| !line.trim().is_empty())
         .collect();
     
-    logging::log(LogLevel::Info, &format!("Found {} URLs to process", urls.len()))?;
+    logging::log(LogLevel::Info, &format!("Found {} URLs to process", urls.len())).await?;
     
     for (i, url) in urls.iter().enumerate() {
-        logging::log(LogLevel::Info, &format!("Processing URL {}/{}: {}", i + 1, urls.len(), url))?;
+        logging::log(LogLevel::Info, &format!("Processing URL {}/{}: {}", i + 1, urls.len(), url)).await?;
         
         match scrape_url(url, config).await {
             Ok(content) => {
-                logging::log(LogLevel::Info, &format!("Successfully scraped {}", url))?;
+                logging::log(LogLevel::Info, &format!("Successfully scraped {}", url)).await?;
                 results.push((url.to_string(), content));
             }
             Err(e) => {
-                logging::log(LogLevel::Error, &format!("Failed to scrape {}: {}", url, e))?;
+                logging::log(LogLevel::Error, &format!("Failed to scrape {}: {}", url, e)).await?;
                 // Continue with next URL instead of failing completely
                 continue;
             }
         }
     }
     
-    logging::log(LogLevel::Info, &format!("Completed scraping {} URLs", results.len()))?;
+    logging::log(LogLevel::Info, &format!("Completed scraping {} URLs", results.len())).await?;
     Ok(results)
 }

@@ -52,7 +52,7 @@ impl App {
         }
     }
 
-    pub fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         // Setup terminal
         enable_raw_mode()?;
         let mut stdout = stdout();
