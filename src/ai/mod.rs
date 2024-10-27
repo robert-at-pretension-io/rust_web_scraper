@@ -45,13 +45,31 @@ pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedCont
         .message.content.clone()
         .context("No content in response")?;
 
-    // Clean the content string of any control characters before parsing
-    let cleaned_content = content.chars()
-        .filter(|c| !c.is_control() || *c == '\n' || *c == '\t')
-        .collect::<String>();
+    // More aggressive cleaning of the response
+    let cleaned_content = content
+        .replace('\u{0000}', "") // Remove null bytes
+        .replace(|c: char| c.is_control() && c != '\n' && c != '\t', "") // Remove other control chars except newline/tab
+        .trim()
+        .to_string();
 
-    let parsed: serde_json::Value = serde_json::from_str(&cleaned_content)
-        .context("Failed to parse OpenAI response as JSON")?;
+    // Try to parse JSON, with fallback handling
+    let parsed: serde_json::Value = match serde_json::from_str(&cleaned_content) {
+        Ok(v) => v,
+        Err(e) => {
+            // If JSON parsing fails, try to extract content between curly braces
+            if let Some(start) = cleaned_content.find('{') {
+                if let Some(end) = cleaned_content.rfind('}') {
+                    let json_subset = &cleaned_content[start..=end];
+                    serde_json::from_str(json_subset)
+                        .context("Failed to parse extracted JSON content")?
+                } else {
+                    return Err(e.into());
+                }
+            } else {
+                return Err(e.into());
+            }
+        }
+    };
 
     let filename = format!("{}.md", 
         slugify(parsed["filename"].as_str()
