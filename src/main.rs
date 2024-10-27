@@ -23,7 +23,8 @@ async fn main() -> Result<()> {
     let (_tx, _rx) = mpsc::channel::<String>(32);
     
     // Start web server in background task
-    tokio::spawn(web::start_server());
+    let web_pool = Arc::clone(&pool);
+    tokio::spawn(web::start_server(web_pool));
 
     // Initialize and run TUI
     let mut app = tui::App::new(Arc::clone(&pool), scraping_config);
