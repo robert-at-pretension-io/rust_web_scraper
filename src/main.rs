@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Create channels for communication between TUI and web server
-    let (tx, _rx) = mpsc::channel(32);
+    let (tx, _rx) = mpsc::channel::<String>(32);
     
     // Start web server in background task
     tokio::spawn(web::start_server());

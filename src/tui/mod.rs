@@ -7,6 +7,7 @@ use ratatui::{
     Frame,
 };
 
+#[derive(Debug)]
 pub enum MenuItem {
     Documents,
     Search,
@@ -45,7 +46,7 @@ impl App {
                 Constraint::Min(0),
                 Constraint::Length(3),
             ])
-            .split(frame.size());
+            .split(frame.area());
 
         let title = Paragraph::new("Documentation Aggregator")
             .style(Style::default().fg(Color::Cyan))
