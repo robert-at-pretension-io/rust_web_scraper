@@ -1,9 +1,22 @@
 # Application 
 
 ## Interface
--> terminal menu-based application with utilities for this application
--> create rust models that map to sqlx database table
--> Once the sites are in the database, show a user interface that also does semantic searches on the descriptions
+
+The application provides two user interfaces:
+
+1. Terminal Interface
+   - Menu-based CLI application built with ratatui
+   - Database management utilities
+   - Command-line search and query capabilities
+
+2. Database Integration
+   - Rust models mapped to SQLx database tables
+   - Efficient storage and retrieval of scraped content
+
+3. Search Interface
+   - Semantic search functionality for stored content
+   - Natural language querying of document descriptions
+   - Interactive results filtering and selection
 
 ## Purpose
 -> Creating a local, searchable database of content
