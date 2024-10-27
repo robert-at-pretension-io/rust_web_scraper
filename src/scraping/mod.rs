@@ -82,12 +82,19 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
 pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Result<Vec<(String, String)>> {
     logging::log(LogLevel::Info, &format!("Reading URLs from file: {}", path)).await?;
     
+    // Read URLs file
     let content = tokio::fs::read_to_string(path).await
         .context("Failed to read URLs file")?;
+
+    // Read or create processed URLs file
+    let processed_path = "processed_urls.txt";
+    let processed_content = tokio::fs::read_to_string(processed_path).await.unwrap_or_default();
+    let processed_urls: Vec<_> = processed_content.lines().collect();
     
     let mut results = Vec::new();
     let urls: Vec<_> = content.lines()
         .filter(|line| !line.trim().is_empty())
+        .filter(|url| !processed_urls.contains(url))
         .collect();
     
     logging::log(LogLevel::Info, &format!("Found {} URLs to process", urls.len())).await?;
@@ -109,5 +116,21 @@ pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Resul
     }
     
     logging::log(LogLevel::Info, &format!("Completed scraping {} URLs", results.len())).await?;
+    
+    // Append newly processed URLs to processed_urls.txt
+    if !results.is_empty() {
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(processed_path)
+            .await?;
+            
+        for (url, _) in &results {
+            use tokio::io::AsyncWriteExt;
+            file.write_all(url.as_bytes()).await?;
+            file.write_all(b"\n").await?;
+        }
+    }
+    
     Ok(results)
 }
