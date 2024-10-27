@@ -1,6 +1,8 @@
 mod models;
 mod tui;
 mod web;
+mod scraping;
+mod db;
 
 use anyhow::Result;
 use tokio::sync::mpsc;

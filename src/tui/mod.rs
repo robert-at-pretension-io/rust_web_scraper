@@ -9,27 +9,74 @@ use ratatui::{
 
 #[derive(Debug)]
 pub enum MenuItem {
-    Documents,
+    Documents(Option<DocumentsMenuItem>),
     Search,
     Settings,
     Quit,
 }
 
+#[derive(Debug)]
+pub enum DocumentsMenuItem {
+    CacheUrl,
+    CacheFromFile,
+    RefreshUrlsList,
+    Back,
+}
+
 pub struct App {
     menu_items: Vec<MenuItem>,
     selected_item: usize,
+    documents_menu_items: Vec<DocumentsMenuItem>,
+    selected_documents_item: usize,
+    is_in_documents_submenu: bool,
+    help_text: String,
 }
 
 impl App {
     pub fn new() -> Self {
         Self {
             menu_items: vec![
-                MenuItem::Documents,
+                MenuItem::Documents(None),
                 MenuItem::Search,
                 MenuItem::Settings,
                 MenuItem::Quit,
             ],
             selected_item: 0,
+            documents_menu_items: vec![
+                DocumentsMenuItem::CacheUrl,
+                DocumentsMenuItem::CacheFromFile,
+                DocumentsMenuItem::RefreshUrlsList,
+                DocumentsMenuItem::Back,
+            ],
+            selected_documents_item: 0,
+            is_in_documents_submenu: false,
+            help_text: String::from("Use ↑↓ to navigate, Enter to select, q to quit"),
+        }
+    }
+
+    fn get_help_text(&self) -> String {
+        match (self.is_in_documents_submenu, &self.menu_items[self.selected_item]) {
+            (false, MenuItem::Documents(_)) => 
+                "Document management and caching options. Press Enter to view sub-menu.".to_string(),
+            (false, MenuItem::Search) => 
+                "Search through cached documents.".to_string(),
+            (false, MenuItem::Settings) => 
+                "Configure application settings.".to_string(),
+            (false, MenuItem::Quit) => 
+                "Exit the application.".to_string(),
+            (true, MenuItem::Documents(_)) => {
+                match self.documents_menu_items[self.selected_documents_item] {
+                    DocumentsMenuItem::CacheUrl => 
+                        "Cache a single URL by entering its address.".to_string(),
+                    DocumentsMenuItem::CacheFromFile => 
+                        "Cache multiple URLs from urls.txt file.".to_string(),
+                    DocumentsMenuItem::RefreshUrlsList => 
+                        "Refresh the list of URLs from urls.txt.".to_string(),
+                    DocumentsMenuItem::Back => 
+                        "Return to main menu.".to_string(),
+                }
+            }
+            _ => String::new(),
         }
     }
 
