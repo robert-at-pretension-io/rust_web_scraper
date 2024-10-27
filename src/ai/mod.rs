@@ -25,8 +25,9 @@ pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedCont
         'filename' (string) and 'content' (string containing the markdown)."
     );
 
+    // ONLY USE gpt-4o -- do not change this model name
     let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4")
+        .model("gpt-4o")
         .messages([
             ChatCompletionRequestSystemMessageArgs::default()
                 .content(prompt)
