@@ -4,7 +4,6 @@ use axum::{
 };
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
-use hyper::server::Server;
 
 pub async fn start_server() {
     let app = Router::new()
