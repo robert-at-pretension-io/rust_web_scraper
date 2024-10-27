@@ -34,7 +34,22 @@ impl App {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        // TUI main loop implementation
+        // Setup terminal
+        let mut terminal = ratatui::init()?;
+
+        // Main loop
+        loop {
+            terminal.draw(|frame| self.draw(frame))?;
+
+            if crossterm::event::poll(std::time::Duration::from_millis(100))? {
+                if self.handle_input(crossterm::event::read()?)? {
+                    break;
+                }
+            }
+        }
+
+        // Restore terminal
+        ratatui::restore()?;
         Ok(())
     }
 
