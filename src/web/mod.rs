@@ -4,6 +4,7 @@ use axum::{
     routing::get,
     Router,
 };
+use chrono::Utc;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
@@ -114,13 +115,14 @@ async fn search_page(
     "#);
 
     if !query.is_empty() {
+        let like_pattern = format!("%{}%", query);
         let results = sqlx::query!(
             r#"SELECT d.id, d.title, d.content, d.url, d.created_at
                FROM documents d
                WHERE d.title LIKE ? OR d.content LIKE ?
                ORDER BY d.created_at DESC LIMIT 10"#,
-            format!("%{}%", query),
-            format!("%{}%", query)
+            like_pattern,
+            like_pattern
         )
         .fetch_all(&*pool)
         .await
@@ -141,52 +143,3 @@ async fn search_page(
     Html(html)
 }
 
-#[debug_handler]
-async fn view_logs(
-    Query(params): Query<SearchParams>,
-    State(pool): State<Arc<SqlitePool>>,
-) -> Html<String> {
-    let query = params.q.unwrap_or_default();
-    let level = params.level.unwrap_or_default();
-    
-    let logs = if query.is_empty() && level.is_empty() {
-        crate::logging::get_recent_logs(&pool, 100).await.unwrap_or_default()
-    } else {
-        let mut sql = String::from(
-            "SELECT level, message, created_at FROM application_logs WHERE 1=1"
-        );
-        let mut params = Vec::new();
-        
-        if !query.is_empty() {
-            sql.push_str(" AND message LIKE ?");
-            params.push(format!("%{}%", query));
-        }
-        
-        if !level.is_empty() {
-            sql.push_str(" AND level = ?");
-            params.push(level.clone());
-        }
-        
-        sql.push_str(" ORDER BY created_at DESC LIMIT 100");
-        
-        sqlx::query(&sql)
-            .bind(&params[0])
-            .bind(&params.get(1).unwrap_or(&String::new()))
-            .map(|row| (
-                row.get(0),
-                row.get(1),
-                row.get(2)
-            ))
-            .fetch_all(&*pool)
-            .await
-            .unwrap_or_default()
-    };
-
-    let template = LogsTemplate {
-        logs,
-        query,
-        level,
-    };
-    
-    Html(template.render().unwrap_or_else(|_| String::from("Template error")))
-}

@@ -9,8 +9,7 @@ pub struct Document {
     pub content: String,
     pub url: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    #[sqlx(try_from = "Vec<u8>")]
+    pub updated_at: DateTime<Utc>
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
