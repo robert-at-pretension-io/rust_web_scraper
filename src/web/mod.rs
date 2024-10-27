@@ -4,6 +4,7 @@ use axum::{
 };
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
+use hyper::server::Server;
 
 pub async fn start_server() {
     let app = Router::new()
@@ -15,10 +16,8 @@ pub async fn start_server() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("Web server listening on {}", addr);
     
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn list_documents() -> &'static str {
