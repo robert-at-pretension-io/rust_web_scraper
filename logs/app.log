@@ -1,0 +1,20 @@
+[2024-10-27 18:30:19.396] INFO - Processing 2 URLs from file
+[2024-10-27 18:30:19.397] INFO - Starting to scrape URL: https://rust-lang.org
+[2024-10-27 18:30:19.438] INFO - Building ScrapingBee API URL
+[2024-10-27 18:30:19.438] INFO - Sending request to ScrapingBee API
+[2024-10-27 18:30:30.307] INFO - Successfully received response from ScrapingBee
+[2024-10-27 18:30:30.335] ERROR - Failed to scrape https://rust-lang.org: Failed to parse ScrapingBee response
+[2024-10-27 18:30:30.335] INFO - Starting to scrape URL: https://docs.rs
+[2024-10-27 18:30:30.351] INFO - Building ScrapingBee API URL
+[2024-10-27 18:30:30.351] INFO - Sending request to ScrapingBee API
+[2024-10-27 18:30:34.139] INFO - Successfully received response from ScrapingBee
+[2024-10-27 18:30:34.404] ERROR - Failed to scrape https://docs.rs: Failed to parse ScrapingBee response
+[2024-10-27 18:36:33.736] INFO - Processing 2 URLs from file
+[2024-10-27 18:36:33.737] INFO - Starting to scrape URL: https://rust-lang.org
+[2024-10-27 18:36:33.771] INFO - Building ScrapingBee API URL
+[2024-10-27 18:36:33.772] INFO - Sending request to ScrapingBee API
+[2024-10-27 18:36:37.264] INFO - Successfully received response from ScrapingBee
+[2024-10-27 18:36:37.303] INFO - Starting to scrape URL: https://docs.rs
+[2024-10-27 18:36:37.320] INFO - Building ScrapingBee API URL
+[2024-10-27 18:36:37.320] INFO - Sending request to ScrapingBee API
+[2024-10-27 18:36:39.359] INFO - Successfully received response from ScrapingBee
