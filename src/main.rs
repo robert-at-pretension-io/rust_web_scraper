@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 
     // Initialize and run TUI
     let mut app = tui::App::new(Arc::clone(&pool), scraping_config);
-    app.run()?;
+    app.run().await?;
 
     Ok(())
 }
