@@ -1,7 +1,13 @@
 use std::sync::Arc;
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode};
+use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::execute;
 use sqlx::SqlitePool;
+use std::io::stdout;
+use ratatui::Terminal;
+use ratatui::backend::CrosstermBackend;
 use crate::{db, logging, scraping}; 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -147,10 +153,11 @@ impl App {
 
     pub fn run(&mut self) -> Result<()> {
         // Setup terminal
-        let mut terminal = match ratatui::init() {
-            Ok(t) => t,
-            Err(e) => return Err(anyhow::anyhow!("Failed to initialize terminal: {}", e)),
-        };
+        enable_raw_mode()?;
+        let mut stdout = stdout();
+        execute!(stdout, EnterAlternateScreen)?;
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
 
         // Main loop
         loop {
@@ -164,9 +171,10 @@ impl App {
         }
 
         // Restore terminal
-        if let Err(e) = ratatui::restore() {
-            return Err(anyhow::anyhow!("Failed to restore terminal: {}", e));
-        }
+        disable_raw_mode()?;
+        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+        terminal.show_cursor()?;
+        
         Ok(())
     }
 
