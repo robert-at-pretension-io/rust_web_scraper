@@ -18,9 +18,7 @@ struct SearchParams {
 
 pub async fn start_server(pool: Arc<SqlitePool>) {
     let app = Router::new()
-        .route("/", get(|| async { Html("Welcome to Web Scraper") documents}))
-        .route("/documents", get(list_documents))
-        .route("/search", get(search_page))
+        .route("/", get(list_documents))
         .layer(CorsLayer::permissive())
         .with_state(pool);
 
@@ -98,49 +96,4 @@ async fn list_documents(
     Html(html)
 }
 
-async fn search_page(
-    Query(params): Query<SearchParams>,
-    State(pool): State<Arc<SqlitePool>>,
-) -> Html<String> {
-    let query = params.q.unwrap_or_default();
-    
-    let mut html = String::from(r#"
-        <html>
-            <head><title>Search</title></head>
-            <body>
-                <h1>Search Documents</h1>
-                <form method="get">
-                    <input type="text" name="q" value="">
-                    <button type="submit">Search</button>
-                </form>
-    "#);
-
-    if !query.is_empty() {
-        let like_pattern = format!("%{}%", query);
-        let results = sqlx::query!(
-            r#"SELECT d.id, d.title, d.content, d.url, d.created_at
-               FROM documents d
-               WHERE d.title LIKE ? OR d.content LIKE ?
-               ORDER BY d.created_at DESC LIMIT 10"#,
-            like_pattern,
-            like_pattern
-        )
-        .fetch_all(&*pool)
-        .await
-        .unwrap_or_default();
-
-        for result in results {
-            html.push_str(&format!(r#"
-                <div style="margin: 20px 0; padding: 10px; border-left: 3px solid blue;">
-                    <h3><a href="{}" target="_blank">{}</a></h3>
-                    <p>{}</p>
-                    <small>ID: {} | Created: {}</small>
-                </div>
-            "#, result.url, result.title, result.content, result.id, result.created_at));
-        }
-    }
-
-    html.push_str("</body></html>");
-    Html(html)
-}
 
