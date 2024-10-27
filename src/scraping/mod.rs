@@ -3,6 +3,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use std::env;
 use dotenv::dotenv;
+use crate::logging::{self, LogLevel};
 
 pub struct ScrapingConfig {
     api_key: String,
@@ -27,9 +28,11 @@ struct ScrapingBeeResponse {
 }
 
 pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
+    logging::log(LogLevel::Info, &format!("Starting to scrape URL: {}", url))?;
+    
     let client = reqwest::Client::new();
     
-    // Build ScrapingBee API URL with parameters
+    logging::log(LogLevel::Info, "Building ScrapingBee API URL")?;
     let api_url = Url::parse_with_params(
         "https://app.scrapingbee.com/api/v1/", 
         &[
@@ -41,20 +44,23 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         ]
     ).context("Failed to build API URL")?;
 
-    // Make request to ScrapingBee API
+    logging::log(LogLevel::Info, "Sending request to ScrapingBee API")?;
     let response = client.get(api_url)
         .send()
         .await
         .context("Failed to send request to ScrapingBee")?;
 
-    // Check if request was successful
     if !response.status().is_success() {
-        return Err(anyhow::anyhow!(
+        let error_msg = format!(
             "ScrapingBee API error: {} - {}", 
             response.status(),
             response.text().await.unwrap_or_default()
-        ));
+        );
+        logging::log(LogLevel::Error, &error_msg)?;
+        return Err(anyhow::anyhow!(error_msg));
     }
+
+    logging::log(LogLevel::Info, "Successfully received response from ScrapingBee")?;
 
     // Parse response
     let scraped = response
@@ -66,15 +72,34 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
 }
 
 pub async fn scrape_urls_from_file(path: &str, config: &ScrapingConfig) -> Result<Vec<(String, String)>> {
-    let content = tokio::fs::read_to_string(path).await?;
-    let mut results = Vec::new();
+    logging::log(LogLevel::Info, &format!("Reading URLs from file: {}", path))?;
     
-    for url in content.lines() {
-        if !url.trim().is_empty() {
-            let content = scrape_url(url, config).await?;
-            results.push((url.to_string(), content));
+    let content = tokio::fs::read_to_string(path).await
+        .context("Failed to read URLs file")?;
+    
+    let mut results = Vec::new();
+    let urls: Vec<_> = content.lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    
+    logging::log(LogLevel::Info, &format!("Found {} URLs to process", urls.len()))?;
+    
+    for (i, url) in urls.iter().enumerate() {
+        logging::log(LogLevel::Info, &format!("Processing URL {}/{}: {}", i + 1, urls.len(), url))?;
+        
+        match scrape_url(url, config).await {
+            Ok(content) => {
+                logging::log(LogLevel::Info, &format!("Successfully scraped {}", url))?;
+                results.push((url.to_string(), content));
+            }
+            Err(e) => {
+                logging::log(LogLevel::Error, &format!("Failed to scrape {}: {}", url, e))?;
+                // Continue with next URL instead of failing completely
+                continue;
+            }
         }
     }
     
+    logging::log(LogLevel::Info, &format!("Completed scraping {} URLs", results.len()))?;
     Ok(results)
 }

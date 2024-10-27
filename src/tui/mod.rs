@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use anyhow::Result;
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::execute;
@@ -8,7 +8,7 @@ use sqlx::SqlitePool;
 use std::io::stdout;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use crate::{db, logging, scraping}; 
+use crate::{db, logging::{self, LogLevel}, scraping}; 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -52,38 +52,38 @@ impl App {
                 self.progress = 0.0;
                 self.progress_message = "Enter URL to cache:".to_string();
                 
-                // TODO: Implement proper input dialog
-                let url = "https://example.com"; // This should come from user input
-                
-                self.progress = 0.2;
-                self.progress_message = format!("Scraping {}...", url);
-                logging::log(&self.pool, logging::LogLevel::Info, &format!("Starting to scrape {}", url)).await?;
-                
-                match scraping::scrape_url(url, &self.scraping_config).await {
-                    Ok(content) => {
-                        self.progress = 0.6;
-                        self.progress_message = "Storing in database...".to_string();
-                        
-                        match db::store_document(url, &content, &self.pool).await {
-                            Ok(id) => {
-                                self.progress = 1.0;
-                                self.progress_message = "Successfully cached document".to_string();
-                                logging::log(&self.pool, logging::LogLevel::Info, 
-                                    &format!("Successfully cached document id {} from {}", id, url)).await?;
-                            },
-                            Err(e) => {
-                                self.progress = 0.0;
-                                self.progress_message = "Failed to store document".to_string();
-                                logging::log(&self.pool, logging::LogLevel::Error, 
-                                    &format!("Failed to store document from {}: {}", url, e)).await?;
+                if let Some(url) = self.input_value.clone() {
+                    logging::log(LogLevel::Info, &format!("Processing URL input: {}", url))?;
+                    
+                    self.progress = 0.2;
+                    self.progress_message = format!("Scraping {}...", url);
+                    
+                    match scraping::scrape_url(&url, &self.scraping_config).await {
+                        Ok(content) => {
+                            self.progress = 0.6;
+                            self.progress_message = "Storing in database...".to_string();
+                            
+                            match db::store_document(&url, &content, &self.pool).await {
+                                Ok(id) => {
+                                    self.progress = 1.0;
+                                    self.progress_message = "Successfully cached document".to_string();
+                                    logging::log(LogLevel::Info, 
+                                        &format!("Successfully cached document id {} from {}", id, url))?;
+                                },
+                                Err(e) => {
+                                    self.progress = 0.0;
+                                    self.progress_message = "Failed to store document".to_string();
+                                    logging::log(LogLevel::Error, 
+                                        &format!("Failed to store document from {}: {}", url, e))?;
+                                }
                             }
+                        },
+                        Err(e) => {
+                            self.progress = 0.0;
+                            self.progress_message = "Failed to scrape URL".to_string();
+                            logging::log(LogLevel::Error, 
+                                &format!("Failed to scrape {}: {}", url, e))?;
                         }
-                    },
-                    Err(e) => {
-                        self.progress = 0.0;
-                        self.progress_message = "Failed to scrape URL".to_string();
-                        logging::log(&self.pool, logging::LogLevel::Error, 
-                            &format!("Failed to scrape {}: {}", url, e)).await?;
                     }
                 }
             }
