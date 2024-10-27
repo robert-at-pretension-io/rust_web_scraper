@@ -2571,3 +2571,430 @@ try_init_with_optionscrossterm	Try to initialize a terminal with the given optio
 try_restorecrossterm	Restore the terminal to its original state.
 Type Aliases
 DefaultTerminalcrossterm	A type alias for the default terminal type.
+
+
+ Docs.rs
+ axum-0.7.7 
+ Platform 
+ Feature flags
+Rust
+ 
+Find crate
+axum
+0.7.7
+All Items
+Sections
+High-level features
+Compatibility
+Example
+Routing
+Handlers
+Extractors
+Responses
+Error handling
+Middleware
+Sharing state with handlers
+Using the State extractor
+Using request extensions
+Using closure captures
+Using tokio’s task_local macro:
+Building integrations for axum
+Required dependencies
+Examples
+Feature flags
+Crate Items
+Re-exports
+Modules
+Structs
+Traits
+Functions
+Type Aliases
+Attribute Macros
+Crates
+axum
+Type ‘S’ or ‘/’ to search, ‘?’ for more options…
+Crate axumCopy item path
+Settings
+Help
+
+Summary
+source
+axum is a web application framework that focuses on ergonomics and modularity.
+
+High-level features
+Route requests to handlers with a macro-free API.
+Declaratively parse requests using extractors.
+Simple and predictable error handling model.
+Generate responses with minimal boilerplate.
+Take full advantage of the tower and tower-http ecosystem of middleware, services, and utilities.
+In particular, the last point is what sets axum apart from other frameworks. axum doesn’t have its own middleware system but instead uses tower::Service. This means axum gets timeouts, tracing, compression, authorization, and more, for free. It also enables you to share middleware with applications written using hyper or tonic.
+
+Compatibility
+axum is designed to work with tokio and hyper. Runtime and transport layer independence is not a goal, at least for the time being.
+
+Example
+The “Hello, World!” of axum is:
+
+use axum::{
+    routing::get,
+    Router,
+};
+
+#[tokio::main]
+async fn main() {
+    // build our application with a single route
+    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+Note using #[tokio::main] requires you enable tokio’s macros and rt-multi-thread features or just full to enable all features (cargo add tokio --features macros,rt-multi-thread).
+
+Routing
+Router is used to set up which paths goes to which services:
+
+use axum::{Router, routing::get};
+
+// our router
+let app = Router::new()
+    .route("/", get(root))
+    .route("/foo", get(get_foo).post(post_foo))
+    .route("/foo/bar", get(foo_bar));
+
+// which calls one of these handlers
+async fn root() {}
+async fn get_foo() {}
+async fn post_foo() {}
+async fn foo_bar() {}
+See Router for more details on routing.
+
+Handlers
+In axum a “handler” is an async function that accepts zero or more “extractors” as arguments and returns something that can be converted into a response.
+
+Handlers are where your application logic lives and axum applications are built by routing between handlers.
+
+See handler for more details on handlers.
+
+Extractors
+An extractor is a type that implements FromRequest or FromRequestParts. Extractors are how you pick apart the incoming request to get the parts your handler needs.
+
+use axum::extract::{Path, Query, Json};
+use std::collections::HashMap;
+
+// `Path` gives you the path parameters and deserializes them.
+async fn path(Path(user_id): Path<u32>) {}
+
+// `Query` gives you the query parameters and deserializes them.
+async fn query(Query(params): Query<HashMap<String, String>>) {}
+
+// Buffer the request body and deserialize it as JSON into a
+// `serde_json::Value`. `Json` supports any type that implements
+// `serde::Deserialize`.
+async fn json(Json(payload): Json<serde_json::Value>) {}
+
+See extract for more details on extractors.
+
+Responses
+Anything that implements IntoResponse can be returned from handlers.
+
+use axum::{
+    body::Body,
+    routing::get,
+    response::Json,
+    Router,
+};
+use serde_json::{Value, json};
+
+// `&'static str` becomes a `200 OK` with `content-type: text/plain; charset=utf-8`
+async fn plain_text() -> &'static str {
+    "foo"
+}
+
+// `Json` gives a content-type of `application/json` and works with any type
+// that implements `serde::Serialize`
+async fn json() -> Json<Value> {
+    Json(json!({ "data": 42 }))
+}
+
+let app = Router::new()
+    .route("/plain_text", get(plain_text))
+    .route("/json", get(json));
+See response for more details on building responses.
+
+Error handling
+axum aims to have a simple and predictable error handling model. That means it is simple to convert errors into responses and you are guaranteed that all errors are handled.
+
+See error_handling for more details on axum’s error handling model and how to handle errors gracefully.
+
+Middleware
+There are several different ways to write middleware for axum. See middleware for more details.
+
+Sharing state with handlers
+It is common to share some state between handlers. For example, a pool of database connections or clients to other services may need to be shared.
+
+The three most common ways of doing that are:
+
+Using the State extractor
+Using request extensions
+Using closure captures
+Using the State extractor
+use axum::{
+    extract::State,
+    routing::get,
+    Router,
+};
+use std::sync::Arc;
+
+struct AppState {
+    // ...
+}
+
+let shared_state = Arc::new(AppState { /* ... */ });
+
+let app = Router::new()
+    .route("/", get(handler))
+    .with_state(shared_state);
+
+async fn handler(
+    State(state): State<Arc<AppState>>,
+) {
+    // ...
+}
+You should prefer using State if possible since it’s more type safe. The downside is that it’s less dynamic than request extensions.
+
+See State for more details about accessing state.
+
+Using request extensions
+Another way to extract state in handlers is using Extension as layer and extractor:
+
+use axum::{
+    extract::Extension,
+    routing::get,
+    Router,
+};
+use std::sync::Arc;
+
+struct AppState {
+    // ...
+}
+
+let shared_state = Arc::new(AppState { /* ... */ });
+
+let app = Router::new()
+    .route("/", get(handler))
+    .layer(Extension(shared_state));
+
+async fn handler(
+    Extension(state): Extension<Arc<AppState>>,
+) {
+    // ...
+}
+The downside to this approach is that you’ll get runtime errors (specifically a 500 Internal Server Error response) if you try and extract an extension that doesn’t exist, perhaps because you forgot to add the middleware or because you’re extracting the wrong type.
+
+Using closure captures
+State can also be passed directly to handlers using closure captures:
+
+use axum::{
+    Json,
+    extract::{Extension, Path},
+    routing::{get, post},
+    Router,
+};
+use std::sync::Arc;
+use serde::Deserialize;
+
+struct AppState {
+    // ...
+}
+
+let shared_state = Arc::new(AppState { /* ... */ });
+
+let app = Router::new()
+    .route(
+        "/users",
+        post({
+            let shared_state = Arc::clone(&shared_state);
+            move |body| create_user(body, shared_state)
+        }),
+    )
+    .route(
+        "/users/:id",
+        get({
+            let shared_state = Arc::clone(&shared_state);
+            move |path| get_user(path, shared_state)
+        }),
+    );
+
+async fn get_user(Path(user_id): Path<String>, state: Arc<AppState>) {
+    // ...
+}
+
+async fn create_user(Json(payload): Json<CreateUserPayload>, state: Arc<AppState>) {
+    // ...
+}
+
+#[derive(Deserialize)]
+struct CreateUserPayload {
+    // ...
+}
+The downside to this approach is that it’s a little more verbose than using State or extensions.
+
+Using tokio’s task_local macro:
+This allows to share state with IntoResponse implementations.
+
+use axum::{
+    extract::Request,
+    http::{header, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
+use tokio::task_local;
+
+#[derive(Clone)]
+struct CurrentUser {
+    name: String,
+}
+task_local! {
+    pub static USER: CurrentUser;
+}
+
+async fn auth(req: Request, next: Next) -> Result<Response, StatusCode> {
+    let auth_header = req
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|header| header.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    if let Some(current_user) = authorize_current_user(auth_header).await {
+        // State is setup here in the middleware
+        Ok(USER.scope(current_user, next.run(req)).await)
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
+}
+async fn authorize_current_user(auth_token: &str) -> Option<CurrentUser> {
+    Some(CurrentUser {
+        name: auth_token.to_string(),
+    })
+}
+
+struct UserResponse;
+
+impl IntoResponse for UserResponse {
+    fn into_response(self) -> Response {
+        // State is accessed here in the IntoResponse implementation
+        let current_user = USER.with(|u| u.clone());
+        (StatusCode::OK, current_user.name).into_response()
+    }
+}
+
+async fn handler() -> UserResponse {
+    UserResponse
+}
+
+let app: Router = Router::new()
+    .route("/", get(handler))
+    .route_layer(middleware::from_fn(auth));
+Building integrations for axum
+Libraries authors that want to provide FromRequest, FromRequestParts, or IntoResponse implementations should depend on the axum-core crate, instead of axum if possible. axum-core contains core types and traits and is less likely to receive breaking changes.
+
+Required dependencies
+To use axum there are a few dependencies you have to pull in as well:
+
+[dependencies]
+axum = "<latest-version>"
+tokio = { version = "<latest-version>", features = ["full"] }
+tower = "<latest-version>"
+The "full" feature for tokio isn’t necessary but it’s the easiest way to get started.
+
+Tower isn’t strictly necessary either but helpful for testing. See the testing example in the repo to learn more about testing axum apps.
+
+Examples
+The axum repo contains a number of examples that show how to put all the pieces together.
+
+Feature flags
+axum uses a set of feature flags to reduce the amount of compiled and optional dependencies.
+
+The following optional features are available:
+
+Name	Description	Default?
+http1	Enables hyper’s http1 feature	Yes
+http2	Enables hyper’s http2 feature	No
+json	Enables the Json type and some similar convenience functionality	Yes
+macros	Enables optional utility macros	No
+matched-path	Enables capturing of every request’s router path and the MatchedPath extractor	Yes
+multipart	Enables parsing multipart/form-data requests with Multipart	No
+original-uri	Enables capturing of every request’s original URI and the OriginalUri extractor	Yes
+tokio	Enables tokio as a dependency and axum::serve, SSE and extract::connect_info types.	Yes
+tower-log	Enables tower’s log feature	Yes
+tracing	Log rejections from built-in extractors	Yes
+ws	Enables WebSockets support via extract::ws	No
+form	Enables the Form extractor	Yes
+query	Enables the Query extractor	Yes
+Re-exports
+pub use async_trait::async_trait;
+pub use http;
+Modules
+body	HTTP body utilities.
+error_handling	Error handling model and utilities
+extract	Types and traits for extracting data from requests.
+handler	Async functions that can be used to handle requests.
+middleware	Utilities for writing middleware
+response	Types and traits for generating responses.
+routing	Routing between Services and handlers.
+servetokio and (http1 or http2)	Serve services.
+Structs
+Error	Errors that can happen when using axum.
+Extension	Extractor and response for extensions.
+Formform	URL encoded extractor and response.
+Jsonjson	JSON Extractor / Response.
+Router	The router type for composing handlers and services.
+Traits
+RequestExt	Extension trait that adds additional methods to Request.
+RequestPartsExt	Extension trait that adds additional methods to Parts.
+ServiceExt	Extension trait that adds additional methods to any Service.
+Functions
+servetokio and (http1 or http2)	Serve the service with the supplied listener.
+Type Aliases
+BoxError	Alias for a type-erased error type.
+Attribute Macros
+debug_handlermacros	Generates better error messages when applied to handler functions.
+debug_middlewaremacros	Generates better error messages when applied to middleware functions.
+
+
+
+
+use std::error::Error;
+
+use async_openai::{types::CreateEmbeddingRequestArgs, Client};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let client = Client::new();
+
+    // An embedding is a vector (list) of floating point numbers.
+    // The distance between two vectors measures their relatedness.
+    // Small distances suggest high relatedness and large distances suggest low relatedness.
+
+    let request = CreateEmbeddingRequestArgs::default()
+        .model("text-embedding-ada-002")
+        .input([
+            "Why do programmers hate nature? It has too many bugs.",
+            "Why was the computer cold? It left its Windows open.",
+        ])
+        .build()?;
+
+    let response = client.embeddings().create(request).await?;
+
+    for data in response.data {
+        println!(
+            "[{}]: has embedding of length {}",
+            data.index,
+            data.embedding.len()
+        )
+    }
+
+    Ok(())
+}

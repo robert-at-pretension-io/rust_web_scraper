@@ -45,9 +45,9 @@ A Rust-based application for aggregating, storing, and searching software docume
 ## Technical Stack
 
 - Backend: Rust with Tokio async runtime
-- Database: SQLx for database operations
+- Database: SQLx for database operations -- using local sqlite file
 - UI: Ratatui for terminal interface
+- async_openai rust crate for using openai
 - APIs: 
   - ScrapingBee for web scraping
   - SerpAPI for search results
-  - OpenAI for content processing

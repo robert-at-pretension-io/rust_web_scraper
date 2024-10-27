@@ -1,3 +1,2 @@
-https://example.com
 https://rust-lang.org
 https://docs.rs
