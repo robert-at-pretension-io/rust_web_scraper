@@ -1,0 +1,2 @@
+https://rust-lang.org
+https://docs.rs

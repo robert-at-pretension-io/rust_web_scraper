@@ -18,3 +18,42 @@
 [2024-10-27 18:36:37.320] INFO - Building ScrapingBee API URL
 [2024-10-27 18:36:37.320] INFO - Sending request to ScrapingBee API
 [2024-10-27 18:36:39.359] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:04:42.633] INFO - Reading URLs from file: urls.txt
+[2024-10-27 21:04:42.637] INFO - Found 2 URLs to process
+[2024-10-27 21:04:42.637] INFO - Processing URL 1/2: https://rust-lang.org
+[2024-10-27 21:04:42.638] INFO - Starting to scrape URL: https://rust-lang.org
+[2024-10-27 21:04:42.669] INFO - Building ScrapingBee API URL
+[2024-10-27 21:04:42.670] INFO - Sending request to ScrapingBee API
+[2024-10-27 21:04:45.577] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:04:45.578] INFO - Successfully scraped https://rust-lang.org
+[2024-10-27 21:04:45.578] INFO - Processing URL 2/2: https://docs.rs
+[2024-10-27 21:04:45.578] INFO - Starting to scrape URL: https://docs.rs
+[2024-10-27 21:04:45.662] INFO - Building ScrapingBee API URL
+[2024-10-27 21:04:45.663] INFO - Sending request to ScrapingBee API
+[2024-10-27 21:04:49.855] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:04:49.856] INFO - Successfully scraped https://docs.rs
+[2024-10-27 21:04:49.856] INFO - Completed scraping 2 URLs
+[2024-10-27 21:06:45.910] INFO - Reading URLs from file: urls.txt
+[2024-10-27 21:06:45.911] INFO - Found 2 URLs to process
+[2024-10-27 21:06:45.911] INFO - Processing URL 1/2: https://rust-lang.org
+[2024-10-27 21:06:45.911] INFO - Starting to scrape URL: https://rust-lang.org
+[2024-10-27 21:06:45.937] INFO - Building ScrapingBee API URL
+[2024-10-27 21:06:45.937] INFO - Sending request to ScrapingBee API
+[2024-10-27 21:06:48.905] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:06:48.906] INFO - Successfully scraped https://rust-lang.org
+[2024-10-27 21:06:48.906] INFO - Processing URL 2/2: https://docs.rs
+[2024-10-27 21:06:48.906] INFO - Starting to scrape URL: https://docs.rs
+[2024-10-27 21:06:48.922] INFO - Building ScrapingBee API URL
+[2024-10-27 21:06:48.922] INFO - Sending request to ScrapingBee API
+[2024-10-27 21:06:52.009] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:06:52.010] INFO - Successfully scraped https://docs.rs
+[2024-10-27 21:06:52.011] INFO - Completed scraping 2 URLs
+[2024-10-27 21:09:51.955] INFO - Reading URLs from file: urls.txt
+[2024-10-27 21:09:51.956] INFO - Found 1 URLs to process
+[2024-10-27 21:09:51.956] INFO - Processing URL 1/1: https://docs.rs
+[2024-10-27 21:09:51.956] INFO - Starting to scrape URL: https://docs.rs
+[2024-10-27 21:09:51.982] INFO - Building ScrapingBee API URL
+[2024-10-27 21:09:51.983] INFO - Sending request to ScrapingBee API
+[2024-10-27 21:09:56.117] INFO - Successfully received response from ScrapingBee
+[2024-10-27 21:09:56.117] INFO - Successfully scraped https://docs.rs
+[2024-10-27 21:09:56.117] INFO - Completed scraping 1 URLs
