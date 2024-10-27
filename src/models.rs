@@ -11,7 +11,6 @@ pub struct Document {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     #[sqlx(try_from = "Vec<u8>")]
-    pub vector_embedding: Option<Vec<f32>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
