@@ -30,9 +30,67 @@ pub struct App {
     selected_documents_item: usize,
     is_in_documents_submenu: bool,
     help_text: String,
+    progress: f64,
+    progress_message: String,
+    pool: Arc<SqlitePool>,
+    scraping_config: scraping::ScrapingConfig,
 }
 
 impl App {
+    pub async fn handle_documents_action(&mut self) -> Result<()> {
+        match self.documents_menu_items[self.selected_documents_item] {
+            DocumentsMenuItem::CacheUrl => {
+                self.progress = 0.0;
+                self.progress_message = "Enter URL to cache:".to_string();
+                
+                // TODO: Implement proper input dialog
+                let url = "https://example.com"; // This should come from user input
+                
+                self.progress = 0.2;
+                self.progress_message = format!("Scraping {}...", url);
+                logging::log(&self.pool, logging::LogLevel::Info, &format!("Starting to scrape {}", url)).await?;
+                
+                match scraping::scrape_url(url, &self.scraping_config).await {
+                    Ok(content) => {
+                        self.progress = 0.6;
+                        self.progress_message = "Storing in database...".to_string();
+                        
+                        match db::store_document(url, &content, &self.pool).await {
+                            Ok(id) => {
+                                self.progress = 1.0;
+                                self.progress_message = "Successfully cached document".to_string();
+                                logging::log(&self.pool, logging::LogLevel::Info, 
+                                    &format!("Successfully cached document id {} from {}", id, url)).await?;
+                            },
+                            Err(e) => {
+                                self.progress = 0.0;
+                                self.progress_message = "Failed to store document".to_string();
+                                logging::log(&self.pool, logging::LogLevel::Error, 
+                                    &format!("Failed to store document from {}: {}", url, e)).await?;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        self.progress = 0.0;
+                        self.progress_message = "Failed to scrape URL".to_string();
+                        logging::log(&self.pool, logging::LogLevel::Error, 
+                            &format!("Failed to scrape {}: {}", url, e)).await?;
+                    }
+                }
+            }
+            DocumentsMenuItem::CacheFromFile => {
+                // TODO: Implement file caching
+            }
+            DocumentsMenuItem::RefreshUrlsList => {
+                // TODO: Implement refresh
+            }
+            DocumentsMenuItem::Back => {
+                self.is_in_documents_submenu = false;
+            }
+        }
+        Ok(())
+    }
+
     pub fn new(pool: Arc<SqlitePool>, scraping_config: scraping::ScrapingConfig) -> Self {
         Self {
             menu_items: vec![
