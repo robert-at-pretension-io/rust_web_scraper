@@ -1,101 +1,49 @@
+# SerpAPI Documentation
 
-Api Dashboard
+## API Overview
 
-Your Account
-Your Searches
-Api Documentation
+SerpAPI provides access to search results from multiple search engines through a unified API interface.
 
-Google Search API
-AI Overview
-Ad Results
-Answer Box
-Available On
-Broaden Searches
-Buying Guide
-DMCA Messages
-Discover More Places
-Discussions and Forums
-Events Results
-Find Results On
-Grammar Check
-Immersive Products
-Inline Images
-Inline People Also Search For
-Inline Products
-Inline Shopping
-Inline Videos
-Jobs Results
-Knowledge Graph
-Local Ads
-Local News
-Local Pack
-News Results
-Organic Results
-Pagination
-Perspectives
-Places Sites
-Popular Destinations
-Product Result
-Product Sites
-Questions And Answers
-Recipes Results
-Refine By
-Refine This Search
-Related Questions
-Related Searches
-Scholarly Articles
-Short Videos
-Showtimes Results
-Spell Check
-Sports Results
-Things To Know
-Top Carousel
-Top Insights
-Top Sights
-Top Stories
-Twitter Results
-Visual Stories
-Google Maps API
-Google Jobs API
-Google Shopping API
-Google Images API
-Google News API
-Google Local API
-Google Trends API
-Google Autocomplete API
-Google Light Search API
-Google About This Result
-Google Lens API
-Google Finance API
-Google Related Questions API
-Google Scholar API
-Google Play Store API
-Google Product API
-Google Immersive Product API
-Google Reverse Image API
-Google Events API
-Google Local Services API
-Google Videos API
-Google Patents API
-Google Ads Transparency API
-Google Flights API
-Google Hotels API
-Google Food API
-Google AI Overview API
-Baidu Search API
-Bing Search API
-DuckDuckGo Search API
-Yahoo! Search API
-Yandex Search API
-Ebay Search API
-YouTube Search API
-Walmart Search API
-The Home Depot Search API
-Apple App Store API
-Naver Search API
-Yelp Search API
-Extra APIs
-API Studio
+### Core Features
+- Real-time search results from major search engines
+- Structured JSON responses
+- Multiple search types support (web, images, shopping, etc.)
+- Comprehensive error handling
+- Rate limiting and usage monitoring
+
+### Available Search Engines
+1. Google Search API
+2. Bing Search API 
+3. Baidu Search API
+4. DuckDuckGo Search API
+5. Yahoo Search API
+6. Yandex Search API
+
+### Specialized APIs
+- Google Maps
+- Google Shopping
+- Google Images
+- Google News
+- Google Local
+- Google Jobs
+- YouTube Search
+- eBay Search
+- Walmart Search
+- Apple App Store
+
+### Additional Features
+- Location-based searching
+- Language customization
+- Safe search filtering
+- Pagination support
+- Custom parameters
+- Response format selection
+
+## API Access
+- Dashboard: Manage your account and API usage
+- Documentation: Detailed guides and references
+- Playground: Test API calls interactively
+- Search Analytics: Monitor your API usage
 
 Playground
 Search
