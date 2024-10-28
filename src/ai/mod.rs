@@ -79,6 +79,45 @@ async fn get_filename(html: &str) -> Result<String> {
     Ok(slugify(&filename.trim()))
 }
 
+pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Vec<String>> {
+    let client = Client::new();
+
+    let results_json = serde_json::to_string(results)?;
+    
+    let prompt = format!(
+        "You are an expert at analyzing search results to find the most relevant and high-quality content. \
+        Select the {} most relevant URLs from these search results. \
+        Consider factors like: content relevance, source authority, content freshness, and information depth. \
+        Return ONLY a JSON array of the selected URLs, nothing else.", 
+        num_urls
+    );
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .model("gpt-4")
+        .messages([
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(prompt)
+                .build()?
+                .into(),
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(results_json)
+                .build()?
+                .into(),
+        ])
+        .build()?;
+
+    let response = client.chat().create(request).await?;
+    let content = response.choices.first()
+        .context("No response from OpenAI")?
+        .message.content.clone()
+        .context("No content in response")?;
+
+    let selected_urls: Vec<String> = serde_json::from_str(&content)
+        .context("Failed to parse selected URLs from AI response")?;
+
+    Ok(selected_urls)
+}
+
 pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedContent> {
     // Get markdown content and filename in parallel
     let (markdown, filename) = tokio::join!(

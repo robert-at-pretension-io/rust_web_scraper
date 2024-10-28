@@ -21,6 +21,10 @@ enum Commands {
         /// Save results to urls.txt
         #[arg(short, long)]
         save: bool,
+
+        /// Number of URLs to select
+        #[arg(short, long, default_value = "10")]
+        num_urls: usize,
     },
     Scrape {
         /// File containing URLs to scrape
@@ -42,7 +46,7 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     
     match Commands::parse() {
-        Commands::Search { query, save } => {
+        Commands::Search { query, save, num_urls } => {
             let api_key = std::env::var("SERPAPI_KEY")
                 .context("SERPAPI_KEY must be set in environment")?;
             
@@ -59,11 +63,10 @@ async fn main() -> Result<()> {
             }
 
             if save {
-                let urls: String = results.iter()
-                    .map(|r| format!("{}\n", r.link))
-                    .collect();
-                fs::write("urls.txt", urls).await?;
-                println!("Saved {} URLs to urls.txt", results.len());
+                let selected_urls = ai::select_urls(&results, num_urls).await?;
+                let urls_text = selected_urls.join("\n") + "\n";
+                fs::write("urls.txt", urls_text).await?;
+                println!("Saved {} selected URLs to urls.txt", selected_urls.len());
             }
         }
         

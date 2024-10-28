@@ -22,6 +22,8 @@ impl SerpApiClient {
                 ("api_key", &self.api_key),
                 ("engine", &"google".to_string()),
                 ("q", &query.to_string()),
+                ("num", &"100".to_string()), // Request maximum results
+                ("start", &"0".to_string()),
             ],
         ).context("Failed to build API URL")?;
 
