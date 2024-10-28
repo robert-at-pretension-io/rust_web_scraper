@@ -25,7 +25,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
     let mut final_content = String::new();
 
     // Split content into chunks
-    let chunks: Vec<&str> = plain_text.as_str()
+    let chunks: Vec<&str> = plain_text.clone().as_str()
         .chars()
         .collect::<Vec<char>>()
         .chunks(MAX_CHUNK_SIZE)
@@ -43,7 +43,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
                 Preserve the important content while improving readability. \
                 Return ONLY the markdown content, nothing else.",
                 i + 1,
-                chunks.len()
+                chunks.clone().len()
             )
         } else {
             "Convert this text content into clean markdown format. \
@@ -59,7 +59,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
                     .build()?
                     .into(),
                 ChatCompletionRequestUserMessageArgs::default()
-                    .content(chunk)
+                    .content(chunk.clone().to_string())
                     .build()?
                     .into(),
             ])
