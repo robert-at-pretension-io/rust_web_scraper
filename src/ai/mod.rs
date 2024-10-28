@@ -7,6 +7,7 @@ use async_openai::{
 use serde::{Deserialize, Serialize};
 use slug::slugify;
 use crate::search::models::SearchResult;
+use crate::logging::log;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProcessedContent {
@@ -41,7 +42,7 @@ async fn get_openai_response(content: &str, system_prompt: &str, model: &str) ->
         .context("No content in response")?;
 
     // Log the interaction
-    crate::logging::log_openai_interaction(content, &content).await?;
+    crate::logging::log_openai_interaction(&content, &content).await?;
 
     Ok(content)
 }
