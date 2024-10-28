@@ -23,7 +23,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
         and other non-essential elements. Return ONLY the markdown content, nothing else.";
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4o")
+        .model("gpt-4o-mini")
         .messages([
             ChatCompletionRequestSystemMessageArgs::default()
                 .content(prompt)
@@ -94,7 +94,7 @@ pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Ve
     );
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4")
+        .model("gpt-4o-mini")
         .messages([
             ChatCompletionRequestSystemMessageArgs::default()
                 .content(prompt)
