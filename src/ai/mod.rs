@@ -94,9 +94,37 @@ async fn get_filename(html: &str) -> Result<String> {
     Ok(slugify(&filename.trim()))
 }
 
-pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Vec<String>> {
-    let client = Client::new();
+async fn validate_json_array(content: &str) -> Result<Vec<String>> {
+    // Try direct parsing first
+    if let Ok(urls) = serde_json::from_str::<Vec<String>>(content) {
+        return Ok(urls);
+    }
 
+    // If that fails, try to extract JSON array from the text
+    if let Some(start) = content.find('[') {
+        if let Some(end) = content.rfind(']') {
+            let json_str = &content[start..=end];
+            if let Ok(urls) = serde_json::from_str::<Vec<String>>(json_str) {
+                return Ok(urls);
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!("Could not extract valid JSON array from response"))
+}
+
+async fn coerce_to_json_array(content: &str) -> Result<String> {
+    let prompt = format!(
+        "Convert the following text into a valid JSON array of URLs. \
+        Extract any URLs present and return them in a proper JSON array format. \
+        Return ONLY the JSON array, nothing else: {}", 
+        content
+    );
+
+    get_openai_response(content, &prompt, "gpt-4o-mini").await
+}
+
+pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Vec<String>> {
     let results_json = serde_json::to_string(results)?;
     
     let prompt = format!(
@@ -107,30 +135,22 @@ pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Ve
         num_urls
     );
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4o-mini")
-        .messages([
-            ChatCompletionRequestSystemMessageArgs::default()
-                .content(prompt)
-                .build()?
-                .into(),
-            ChatCompletionRequestUserMessageArgs::default()
-                .content(results_json)
-                .build()?
-                .into(),
-        ])
-        .build()?;
+    // First attempt
+    let mut response = get_openai_response(&results_json, &prompt, "gpt-4o-mini").await?;
+    
+    // Try up to 3 times to get a valid JSON array
+    for _ in 0..2 {
+        match validate_json_array(&response).await {
+            Ok(urls) => return Ok(urls),
+            Err(_) => {
+                // Try to coerce the response into a JSON array
+                response = coerce_to_json_array(&response).await?;
+            }
+        }
+    }
 
-    let response = client.chat().create(request).await?;
-    let content = response.choices.first()
-        .context("No response from OpenAI")?
-        .message.content.clone()
-        .context("No content in response")?;
-
-    let selected_urls: Vec<String> = serde_json::from_str(&content)
-        .context("Failed to parse selected URLs from AI response")?;
-
-    Ok(selected_urls)
+    // Final attempt to validate
+    validate_json_array(&response).await
 }
 
 pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedContent> {
