@@ -12,7 +12,14 @@ use clap::Parser;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Parser)]
 enum Commands {
+    /// Search for content
     Search {
         /// Search query
         #[arg(short, long)]
@@ -45,7 +52,8 @@ enum Commands {
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     
-    match Commands::parse() {
+    let cli = Cli::parse();
+    match cli.command {
         Commands::Search { query, save, num_urls } => {
             let api_key = std::env::var("SERPAPI_KEY")
                 .context("SERPAPI_KEY must be set in environment")?;
