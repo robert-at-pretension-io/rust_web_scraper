@@ -16,11 +16,14 @@ pub struct ProcessedContent {
 }
 
 async fn get_markdown_content(html: &str) -> Result<String> {
+    // First convert HTML to plain text to remove clutter
+    let plain_text = html2text::from_read(html.as_bytes(), 80);
+    
     let client = Client::new();
 
-    let prompt = "You are a helpful assistant that converts HTML content into clean markdown format. \
-        The markdown should preserve the important content while removing navigation, ads, \
-        and other non-essential elements. Return ONLY the markdown content, nothing else.";
+    let prompt = "You are a helpful assistant that converts text content into clean markdown format. \
+        The markdown should preserve the important content while improving readability and structure. \
+        Return ONLY the markdown content, nothing else.";
 
     let request = CreateChatCompletionRequestArgs::default()
         .model("gpt-4o-mini")
@@ -49,9 +52,12 @@ async fn get_markdown_content(html: &str) -> Result<String> {
 }
 
 async fn get_filename(html: &str) -> Result<String> {
+    // Convert HTML to plain text first
+    let plain_text = html2text::from_read(html.as_bytes(), 80);
+    
     let client = Client::new();
 
-    let prompt = "Based on the HTML content provided, suggest a descriptive filename (without extension) \
+    let prompt = "Based on the text content provided, suggest a descriptive filename (without extension) \
         that summarizes what this content is about. Return ONLY the filename, nothing else.";
 
     let request = CreateChatCompletionRequestArgs::default()
