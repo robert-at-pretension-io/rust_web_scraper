@@ -84,37 +84,36 @@ async fn main() -> Result<()> {
             // Create output directory if it doesn't exist
             fs::create_dir_all(&output_dir).await?;
     
-    // Scrape URLs and process content
-    let urls = scraping::read_unprocessed_urls(&args.urls_file, &args.processed_file).await?;
+            // Scrape URLs and process content
+            let urls = scraping::read_unprocessed_urls(&urls_file, &processed_file).await?;
     
-    for url in urls {
-        match scraping::scrape_url(&url, &config).await {
-            Ok(html) => {
-                match ai::process_html_content(&html, &url).await {
-                    Ok(processed) => {
-                        // Save markdown file
-                        let output_path = Path::new(&args.output_dir).join(&processed.filename);
-                        fs::write(&output_path, &processed.content).await?;
-                        
-                        // Only mark as processed if everything succeeded
-                        scraping::mark_url_processed(&url, &args.processed_file).await?;
-                        
-                        println!("Processed {} -> {}", url, processed.filename);
+            for url in urls {
+                match scraping::scrape_url(&url, &config).await {
+                    Ok(html) => {
+                        match ai::process_html_content(&html, &url).await {
+                            Ok(processed) => {
+                                // Save markdown file
+                                let output_path = Path::new(&output_dir).join(&processed.filename);
+                                fs::write(&output_path, &processed.content).await?;
+                                
+                                // Only mark as processed if everything succeeded
+                                scraping::mark_url_processed(&url, &processed_file).await?;
+                                
+                                println!("Processed {} -> {}", url, processed.filename);
+                            },
+                            Err(e) => {
+                                println!("Failed to process content for {}: {}", url, e);
+                                continue;
+                            }
+                        }
                     },
                     Err(e) => {
-                        println!("Failed to process content for {}: {}", url, e);
+                        println!("Failed to scrape {}: {}", url, e);
                         continue;
                     }
                 }
-            },
-            Err(e) => {
-                println!("Failed to scrape {}: {}", url, e);
-                continue;
             }
         }
     }
-
     Ok(())
-}
-    }
 }
