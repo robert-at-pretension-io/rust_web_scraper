@@ -15,40 +15,70 @@ pub struct ProcessedContent {
     pub source_url: String,
 }
 
+const MAX_CHUNK_SIZE: usize = 60000; // Leave room for prompt and overhead
+
 async fn get_markdown_content(html: &str) -> Result<String> {
-    // First convert HTML to plain text to remove clutter
+    // Convert HTML to plain text first to reduce size
     let plain_text = html2text::from_read(html.as_bytes(), 80);
     
     let client = Client::new();
+    let mut final_content = String::new();
 
-    let prompt = "You are a helpful assistant that converts text content into clean markdown format. \
-        The markdown should preserve the important content while improving readability and structure. \
-        Return ONLY the markdown content, nothing else.";
+    // Split content into chunks
+    let chunks: Vec<&str> = plain_text.as_str()
+        .chars()
+        .collect::<Vec<char>>()
+        .chunks(MAX_CHUNK_SIZE)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<String>>()
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4o-mini")
-        .messages([
-            ChatCompletionRequestSystemMessageArgs::default()
-                .content(prompt)
-                .build()?
-                .into(),
-            ChatCompletionRequestUserMessageArgs::default()
-                .content(html)
-                .build()?
-                .into(),
-        ])
-        .build()?;
+    for (i, chunk) in chunks.iter().enumerate() {
+        let prompt = if chunks.len() > 1 {
+            format!(
+                "You are processing part {} of {} of a document. \
+                Convert this text content into clean markdown format. \
+                Preserve the important content while improving readability. \
+                Return ONLY the markdown content, nothing else.",
+                i + 1,
+                chunks.len()
+            )
+        } else {
+            "Convert this text content into clean markdown format. \
+            Preserve the important content while improving readability. \
+            Return ONLY the markdown content, nothing else.".to_string()
+        };
 
-    let response = client.chat().create(request).await?;
-    let content = response.choices.first()
-        .context("No response from OpenAI")?
-        .message.content.clone()
-        .context("No content in response")?;
+        let request = CreateChatCompletionRequestArgs::default()
+            .model("gpt-4o-mini")
+            .messages([
+                ChatCompletionRequestSystemMessageArgs::default()
+                    .content(&prompt)
+                    .build()?
+                    .into(),
+                ChatCompletionRequestUserMessageArgs::default()
+                    .content(chunk)
+                    .build()?
+                    .into(),
+            ])
+            .build()?;
 
-    // Log the interaction
-    crate::logging::log_openai_interaction(html, &content).await?;
+        let response = client.chat().create(request).await?;
+        let content = response.choices.first()
+            .context("No response from OpenAI")?
+            .message.content.clone()
+            .context("No content in response")?;
 
-    Ok(content.trim().to_string())
+        // Log the interaction
+        crate::logging::log_openai_interaction(chunk, &content).await?;
+
+        final_content.push_str(&content);
+        final_content.push_str("\n\n");
+    }
+
+    Ok(final_content.trim().to_string())
 }
 
 async fn get_filename(html: &str) -> Result<String> {
