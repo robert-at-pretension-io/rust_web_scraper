@@ -22,9 +22,6 @@ pub async fn store_document(url: &str, content: &str, pool: &SqlitePool) -> Resu
 
     Ok(result.id)
 }
-use anyhow::Result;
-use sqlx::SqlitePool;
-use chrono::Utc;
 
 pub async fn store_document(url: &str, content: &str, pool: &SqlitePool) -> Result<i64> {
     let now = Utc::now();

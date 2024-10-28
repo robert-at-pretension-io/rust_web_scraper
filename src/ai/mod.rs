@@ -6,6 +6,7 @@ use async_openai::{
 };
 use serde::{Deserialize, Serialize};
 use slug::slugify;
+use crate::search::models::SearchResult;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProcessedContent {

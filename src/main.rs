@@ -5,7 +5,7 @@ mod scraping;
 mod models;
 mod search;
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use std::path::Path;
 use tokio::fs;
 use clap::Parser;
