@@ -17,11 +17,38 @@ pub struct ProcessedContent {
 
 const MAX_CHUNK_SIZE: usize = 60000; // Leave room for prompt and overhead
 
+async fn get_openai_response(content: &str, system_prompt: &str, model: &str) -> Result<String> {
+    let client = Client::new();
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .model(model)
+        .messages([
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(system_prompt)
+                .build()?
+                .into(),
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(content)
+                .build()?
+                .into(),
+        ])
+        .build()?;
+
+    let response = client.chat().create(request).await?;
+    let content = response.choices.first()
+        .context("No response from OpenAI")?
+        .message.content.clone()
+        .context("No content in response")?;
+
+    // Log the interaction
+    crate::logging::log_openai_interaction(content, &content).await?;
+
+    Ok(content)
+}
+
 async fn get_markdown_content(html: &str) -> Result<String> {
     // Convert HTML to plain text first to reduce size
     let plain_text = html2text::from_read(html.as_bytes(), 80);
-    
-    let client = Client::new();
     let mut final_content = String::new();
 
     // Split content into chunks
@@ -39,7 +66,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
                 Preserve the important content while improving readability. \
                 Return ONLY the markdown content, nothing else.",
                 i + 1,
-                chunks.clone().len()
+                chunks.len()
             )
         } else {
             "Convert this text content into clean markdown format. \
@@ -47,29 +74,7 @@ async fn get_markdown_content(html: &str) -> Result<String> {
             Return ONLY the markdown content, nothing else.".to_string()
         };
 
-        let request = CreateChatCompletionRequestArgs::default()
-            .model("gpt-4o-mini")
-            .messages([
-                ChatCompletionRequestSystemMessageArgs::default()
-                    .content(&prompt)
-                    .build()?
-                    .into(),
-                ChatCompletionRequestUserMessageArgs::default()
-                    .content(chunk.clone().to_string())
-                    .build()?
-                    .into(),
-            ])
-            .build()?;
-
-        let response = client.chat().create(request).await?;
-        let content = response.choices.first()
-            .context("No response from OpenAI")?
-            .message.content.clone()
-            .context("No content in response")?;
-
-        // Log the interaction
-        crate::logging::log_openai_interaction(chunk, &content).await?;
-
+        let content = get_openai_response(chunk, &prompt, "gpt-4o-mini").await?;
         final_content.push_str(&content);
         final_content.push_str("\n\n");
     }
@@ -81,34 +86,10 @@ async fn get_filename(html: &str) -> Result<String> {
     // Convert HTML to plain text first
     let plain_text = html2text::from_read(html.as_bytes(), 80);
     
-    let client = Client::new();
-
     let prompt = "Based on the text content provided, suggest a descriptive filename (without extension) \
         that summarizes what this content is about. Return ONLY the filename, nothing else.";
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4o")
-        .messages([
-            ChatCompletionRequestSystemMessageArgs::default()
-                .content(prompt)
-                .build()?
-                .into(),
-            ChatCompletionRequestUserMessageArgs::default()
-                .content(html)
-                .build()?
-                .into(),
-        ])
-        .build()?;
-
-    let response = client.chat().create(request).await?;
-    let filename = response.choices.first()
-        .context("No response from OpenAI")?
-        .message.content.clone()
-        .context("No content in response")?;
-
-    // Log the interaction
-    crate::logging::log_openai_interaction(html, &filename).await?;
-
+    let filename = get_openai_response(&plain_text, prompt, "gpt-4o").await?;
     Ok(slugify(&filename.trim()))
 }
 
