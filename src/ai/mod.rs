@@ -19,20 +19,16 @@ const MAX_CHUNK_SIZE: usize = 60000; // Leave room for prompt and overhead
 
 async fn get_markdown_content(html: &str) -> Result<String> {
     // Convert HTML to plain text first to reduce size
-    let plain_text = html2text::from_read(html.as_bytes(), 80);
+    let _plain_text = html2text::from_read(html.as_bytes(), 80);
     
     let client = Client::new();
     let mut final_content = String::new();
 
     // Split content into chunks
-    let chunks: Vec<&str> = plain_text.clone().as_str()
-        .chars()
-        .collect::<Vec<char>>()
+    let text_chars: Vec<char> = plain_text.chars().collect();
+    let chunks: Vec<String> = text_chars
         .chunks(MAX_CHUNK_SIZE)
         .map(|c| c.iter().collect::<String>())
-        .collect::<Vec<String>>()
-        .iter()
-        .map(|s| s.as_str())
         .collect();
 
     for (i, chunk) in chunks.iter().enumerate() {
