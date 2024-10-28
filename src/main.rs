@@ -64,9 +64,16 @@ async fn main() -> Result<()> {
 
             if save {
                 let selected_urls = ai::select_urls(&results, num_urls).await?;
+                let mut file = fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open("urls.txt")
+                    .await?;
+                
+                use tokio::io::AsyncWriteExt;
                 let urls_text = selected_urls.join("\n") + "\n";
-                fs::write("urls.txt", urls_text).await?;
-                println!("Saved {} selected URLs to urls.txt", selected_urls.len());
+                file.write_all(urls_text.as_bytes()).await?;
+                println!("Appended {} selected URLs to urls.txt", selected_urls.len());
             }
         }
         
