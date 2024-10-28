@@ -19,7 +19,7 @@ const MAX_CHUNK_SIZE: usize = 60000; // Leave room for prompt and overhead
 
 async fn get_markdown_content(html: &str) -> Result<String> {
     // Convert HTML to plain text first to reduce size
-    let _plain_text = html2text::from_read(html.as_bytes(), 80);
+    let plain_text = html2text::from_read(html.as_bytes(), 80);
     
     let client = Client::new();
     let mut final_content = String::new();
