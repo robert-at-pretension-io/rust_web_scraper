@@ -13,3 +13,4 @@ https://www.langchain.com/
 https://api.python.langchain.com/
 https://github.com/langchain-ai/langchain
 https://python.langchain.com/docs/how_to/
+https://docs.python.org/
