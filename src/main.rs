@@ -4,6 +4,7 @@ mod logging;
 mod scraping;
 mod models;
 mod search;
+mod cli;
 
 use anyhow::{Result, Context};
 use std::path::Path;
@@ -52,7 +53,10 @@ enum Commands {
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     
-    let cli = Cli::parse();
+    // Check if any command line arguments were provided
+    if std::env::args().len() > 1 {
+        // Use traditional CLI mode
+        let cli = Cli::parse();
     match cli.command {
         Commands::Search { query, save, num_urls } => {
             let api_key = std::env::var("SERPAPI_KEY")
@@ -123,5 +127,9 @@ async fn main() -> Result<()> {
             }
         }
     }
-    Ok(())
+        Ok(())
+    } else {
+        // Use interactive mode
+        cli::interactive_mode().await
+    }
 }
