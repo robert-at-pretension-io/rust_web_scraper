@@ -110,19 +110,19 @@ async fn main() -> Result<()> {
         }
         
         Commands::Scrape { urls_file, processed_file, output_dir } => {
-            // Initialize scraping config
             let config = scraping::ScrapingConfig::new()?;
+            let ai_config = ai::AiConfig {
+                model: cli.ai_model.clone(),
+                purpose: "Extract and format documentation content".to_string(),
+            };
             
-            // Create output directory if it doesn't exist
             fs::create_dir_all(&output_dir).await?;
-    
-            // Scrape URLs and process content
             let urls = scraping::read_unprocessed_urls(&urls_file, &processed_file).await?;
     
             for url in urls {
                 match scraping::scrape_url(&url, &config).await {
                     Ok(html) => {
-                        match ai::process_html_content(&html, &url).await {
+                        match ai::process_html_content(&html, &url, &ai_config).await {
                             Ok(processed) => {
                                 // Save markdown file
                                 let output_path = Path::new(&output_dir).join(&processed.filename);

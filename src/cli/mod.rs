@@ -95,6 +95,15 @@ async fn handle_search() -> Result<()> {
 }
 
 async fn handle_scrape() -> Result<()> {
+    let ai_config = crate::ai::AiConfig {
+        model: Text::new("Enter AI model to use:")
+            .with_default("gpt-4o-mini")
+            .prompt()?,
+        purpose: Text::new("What is the purpose of this scraping?")
+            .with_default("Extract and format documentation content")
+            .prompt()?,
+    };
+
     let urls_file = Text::new("Enter the URLs file path:")
         .with_default("urls.txt")
         .prompt()?;
@@ -119,7 +128,7 @@ async fn handle_scrape() -> Result<()> {
     for url in urls {
         match crate::scraping::scrape_url(&url, &config).await {
             Ok(html) => {
-                match crate::ai::process_html_content(&html, &url).await {
+                match crate::ai::process_html_content(&html, &url, &ai_config).await {
                     Ok(processed) => {
                         let output_path = std::path::Path::new(&output_dir).join(&processed.filename);
                         tokio::fs::write(&output_path, &processed.content).await?;

@@ -41,7 +41,12 @@ pub async fn crawl_url(
         
         match scrape_url(&url, config).await {
             Ok(html) => {
-                match ai::process_html_content(&html, &url).await {
+                let ai_config = crate::ai::AiConfig {
+                    model: std::env::var("AI_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string()),
+                    purpose: purpose.to_string(),
+                };
+        
+                match ai::process_html_content(&html, &url, &ai_config).await {
                     Ok(processed) => {
                         // Save markdown file
                         let output_path = Path::new(output_dir).join(&processed.filename);
