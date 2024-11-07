@@ -47,6 +47,20 @@ enum Commands {
         #[arg(short, long, default_value = "output")]
         output_dir: String,
     },
+    /// Crawl starting from a URL
+    Crawl {
+        /// Starting URL to crawl
+        #[arg(short, long)]
+        url: String,
+
+        /// File to store processed URLs
+        #[arg(short, long, default_value = "processed_urls.txt")]
+        processed_file: String,
+
+        /// Output directory for markdown files
+        #[arg(short, long, default_value = "output")]
+        output_dir: String,
+    },
 }
 
 #[tokio::main]
@@ -125,6 +139,10 @@ async fn main() -> Result<()> {
                     }
                 }
             }
+        }
+        
+        Commands::Crawl { url, processed_file, output_dir } => {
+            cli::handle_crawl(&url, &processed_file, &output_dir).await?;
         }
     }
         Ok(())
