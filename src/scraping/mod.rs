@@ -134,18 +134,29 @@ pub async fn read_unprocessed_urls(urls_path: &str, processed_path: &str) -> Res
     let content = tokio::fs::read_to_string(urls_path).await
         .context("Failed to read URLs file")?;
 
-    // Read processed URLs file
+    // Read processed URLs file, creating an empty string if file doesn't exist
     let processed_content = tokio::fs::read_to_string(processed_path).await.unwrap_or_default();
-    let processed_urls: Vec<_> = processed_content.lines().collect();
+    
+    // Create HashSet of processed URLs for efficient lookup
+    let processed_urls: std::collections::HashSet<String> = processed_content
+        .lines()
+        .map(|line| line.trim().to_string())
+        .collect();
     
     // Filter out empty lines and already processed URLs
-    let urls: Vec<_> = content.lines()
-        .filter(|line| !line.trim().is_empty())
-        .filter(|url| !processed_urls.contains(url))
-        .map(|s| s.to_string())
+    let urls: Vec<_> = content
+        .lines()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty() && !processed_urls.contains(line))
         .collect();
     
     logging::log(LogLevel::Info, &format!("Found {} unprocessed URLs", urls.len())).await?;
+    
+    if urls.is_empty() {
+        logging::log(LogLevel::Warning, "No unprocessed URLs found").await?;
+    } else {
+        logging::log(LogLevel::Info, &format!("First unprocessed URL: {}", urls[0])).await?;
+    }
     
     Ok(urls)
 }
