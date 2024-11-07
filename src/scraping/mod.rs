@@ -19,7 +19,7 @@ impl ScrapingConfig {
             .context("SCRAPING_BEE_API_KEY must be set in environment")?;
         Ok(Self { 
             api_key,
-            premium_proxy: true,
+            premium_proxy: true,  // Always use premium proxy
             stealth_proxy: false,
         })
     }
@@ -54,13 +54,10 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         let mut params = vec![
             ("api_key", config.api_key.clone()),
             ("url", url.to_string()),
-            ("render_js", "true".to_string()),
+            ("render_js", "true".to_string()),  // Always enable JavaScript
+            ("premium_proxy", "true".to_string()),  // Always use premium proxy
             ("block_ads", "true".to_string()),
         ];
-
-        if config.premium_proxy {
-            params.push(("premium_proxy", "true".to_string()));
-        }
 
         if config.stealth_proxy {
             params.push(("stealth_proxy", "true".to_string()));
