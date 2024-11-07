@@ -129,8 +129,9 @@ async fn handle_scrape() -> Result<()> {
         .with_default("output")
         .prompt()?;
 
-    // Initialize scraping config
+    // Initialize scraping config and metadata
     let config = crate::scraping::ScrapingConfig::new()?;
+    let mut project_metadata = crate::metadata::ProjectMetadata::load(&output_dir).await?;
     
     // Create output directory if it doesn't exist
     tokio::fs::create_dir_all(&output_dir).await?;
@@ -145,10 +146,43 @@ async fn handle_scrape() -> Result<()> {
                     Ok(processed) => {
                         let output_path = std::path::Path::new(&output_dir).join(&processed.filename);
                         tokio::fs::write(&output_path, &processed.content).await?;
+                        
+                        // Create and add metadata
+                        let doc_metadata = crate::metadata::create_document_metadata(
+                            processed.filename.clone(),
+                            processed.title,
+                            url.clone(),
+                            ai_config.purpose.clone(),
+                            ai_config.model.clone(),
+                            &processed.content,
+                            processed.processing_time,
+                            true,
+                            None,
+                        ).await;
+                        
+                        project_metadata.add_document(doc_metadata);
+                        project_metadata.save(&output_dir).await?;
+                        
                         crate::scraping::mark_url_processed(&url, &processed_file).await?;
                         println!("Processed {} -> {}", url, processed.filename);
                     },
                     Err(e) => {
+                        // Track failed processing in metadata
+                        let doc_metadata = crate::metadata::create_document_metadata(
+                            format!("failed_{}", slug::slugify(&url)),
+                            "Processing Failed".to_string(),
+                            url.clone(),
+                            ai_config.purpose.clone(),
+                            ai_config.model.clone(),
+                            "",
+                            0.0,
+                            false,
+                            Some(e.to_string()),
+                        ).await;
+                        
+                        project_metadata.add_document(doc_metadata);
+                        project_metadata.save(&output_dir).await?;
+                        
                         println!("Failed to process content for {}: {}", url, e);
                         continue;
                     }

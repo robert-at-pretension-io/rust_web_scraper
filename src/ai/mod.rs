@@ -18,6 +18,8 @@ pub struct ProcessedContent {
     pub filename: String,
     pub content: String,
     pub source_url: String,
+    pub title: String,
+    pub processing_time: f64,
 }
 
 const MAX_CHUNK_SIZE: usize = 60000; // Leave room for prompt and overhead
@@ -201,15 +203,30 @@ pub async fn process_html_content(
     url: &str,
     config: &AiConfig,
 ) -> Result<ProcessedContent> {
+    let start_time = std::time::Instant::now();
+    
     // First get markdown content
     let markdown = get_markdown_content(html, config).await?;
     
     // Then get filename based on the markdown
     let filename = format!("{}.md", get_filename(&markdown, config).await?);
+    
+    // Extract title from the first header in the markdown
+    let title = extract_title(&markdown).unwrap_or_else(|| filename.clone());
+    
+    let processing_time = start_time.elapsed().as_secs_f64();
 
     Ok(ProcessedContent {
         filename,
         content: markdown,
         source_url: url.to_string(),
+        title,
+        processing_time,
     })
+}
+
+fn extract_title(markdown: &str) -> Option<String> {
+    markdown.lines()
+        .find(|line| line.starts_with('#'))
+        .map(|line| line.trim_start_matches('#').trim().to_string())
 }
