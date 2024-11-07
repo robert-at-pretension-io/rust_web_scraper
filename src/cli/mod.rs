@@ -4,13 +4,19 @@ use crate::search::SerpApiClient;
 
 pub async fn interactive_mode() -> Result<()> {
     // Main menu
-    let options = vec!["Search", "Scrape", "Crawl", "Exit"];
+    let options = vec!["Search", "Scrape", "Crawl", "Refresh", "Exit"];
     let choice = Select::new("What would you like to do?", options).prompt()?;
 
     match choice {
         "Search" => handle_search().await?,
         "Scrape" => handle_scrape().await?,
         "Crawl" => handle_crawl_interactive().await?,
+        "Refresh" => {
+            let output_dir = Text::new("Enter the output directory:")
+                .with_default("output")
+                .prompt()?;
+            crate::refresh::handle_refresh(&output_dir).await?;
+        },
         "Exit" => return Ok(()),
         _ => unreachable!(),
     }

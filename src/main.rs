@@ -41,6 +41,12 @@ enum Commands {
         #[arg(short, long, default_value = "10")]
         num_urls: usize,
     },
+    /// Refresh existing documentation
+    Refresh {
+        /// Output directory containing files to refresh
+        #[arg(short, long, default_value = "output")]
+        output_dir: String,
+    },
     Scrape {
         /// File containing URLs to scrape
         #[arg(short, long, default_value = "urls.txt")]
@@ -151,6 +157,9 @@ async fn main() -> Result<()> {
         
         Commands::Crawl { url, processed_file, output_dir } => {
             cli::handle_crawl(&url, &processed_file, &output_dir).await?;
+        }
+        Commands::Refresh { output_dir } => {
+            refresh::handle_refresh(&output_dir).await?;
         }
     }
         Ok(())
