@@ -46,7 +46,8 @@ pub async fn crawl_url(
                     purpose: purpose.to_string(),
                 };
         
-                match ai::process_html_content(&html, &url, &ai_config).await {
+                let project_metadata = crate::metadata::ProjectMetadata::new("Documentation Project");
+                match ai::process_html_content(&html, &url, &ai_config, &project_metadata).await {
                     Ok(processed) => {
                         // Save markdown file
                         let output_path = Path::new(output_dir).join(&processed.filename);

@@ -142,7 +142,7 @@ async fn handle_scrape() -> Result<()> {
     for url in urls {
         match crate::scraping::scrape_url(&url, &config).await {
             Ok(html) => {
-                match crate::ai::process_html_content(&html, &url, &ai_config).await {
+                match crate::ai::process_html_content(&html, &url, &ai_config, &project_metadata).await {
                     Ok(processed) => {
                         let output_path = std::path::Path::new(&output_dir).join(&processed.filename);
                         tokio::fs::write(&output_path, &processed.content).await?;
@@ -180,7 +180,7 @@ async fn handle_scrape() -> Result<()> {
                             Some(e.to_string()),
                         ).await;
                         
-                        project_metadata.add_document(doc_metadata);
+                        project_metadata.add_document(doc_metadata?);
                         project_metadata.save(&output_dir).await?;
                         
                         println!("Failed to process content for {}: {}", url, e);

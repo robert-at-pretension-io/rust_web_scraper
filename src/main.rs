@@ -123,7 +123,8 @@ async fn main() -> Result<()> {
             for url in urls {
                 match scraping::scrape_url(&url, &config).await {
                     Ok(html) => {
-                        match ai::process_html_content(&html, &url, &ai_config).await {
+                        let project_metadata = metadata::ProjectMetadata::new("Documentation Project");
+                        match ai::process_html_content(&html, &url, &ai_config, &project_metadata).await {
                             Ok(processed) => {
                                 // Save markdown file
                                 let output_path = Path::new(&output_dir).join(&processed.filename);

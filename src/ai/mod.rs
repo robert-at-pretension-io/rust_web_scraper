@@ -1,4 +1,5 @@
 use anyhow::{Result, Context};
+use crate::metadata::ProjectMetadata;
 use async_openai::{
     types::{CreateChatCompletionRequestArgs, ChatCompletionRequestSystemMessageArgs,
             ChatCompletionRequestUserMessageArgs},
