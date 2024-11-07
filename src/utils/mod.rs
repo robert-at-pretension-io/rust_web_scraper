@@ -1,6 +1,5 @@
 use std::io::{self, Write};
 use std::time::Duration;
-use tokio::time::sleep;
 
 pub struct Spinner {
     frames: Vec<&'static str>,
