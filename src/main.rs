@@ -8,6 +8,7 @@ mod cli;
 mod crawling;
 mod utils;
 mod metadata;
+mod refresh;
 
 use anyhow::{Result, Context};
 use std::path::Path;
