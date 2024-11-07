@@ -4,17 +4,46 @@ use crate::search::SerpApiClient;
 
 pub async fn interactive_mode() -> Result<()> {
     // Main menu
-    let options = vec!["Search", "Scrape", "Exit"];
+    let options = vec!["Search", "Scrape", "Crawl", "Exit"];
     let choice = Select::new("What would you like to do?", options).prompt()?;
 
     match choice {
         "Search" => handle_search().await?,
         "Scrape" => handle_scrape().await?,
+        "Crawl" => handle_crawl_interactive().await?,
         "Exit" => return Ok(()),
         _ => unreachable!(),
     }
 
     Ok(())
+}
+
+async fn handle_crawl_interactive() -> Result<()> {
+    let url = Text::new("Enter the starting URL:").prompt()?;
+    
+    let processed_file = Text::new("Enter the processed URLs file path:")
+        .with_default("processed_urls.txt")
+        .prompt()?;
+
+    let output_dir = Text::new("Enter the output directory:")
+        .with_default("output")
+        .prompt()?;
+
+    let max_depth = Text::new("Enter maximum crawl depth:")
+        .with_default("2")
+        .prompt()?
+        .parse::<usize>()?;
+
+    let config = crate::scraping::ScrapingConfig::new()?;
+    crate::crawling::crawl_url(&url, &processed_file, &output_dir, &config, max_depth).await?;
+
+    Ok(())
+}
+
+pub async fn handle_crawl(url: &str, processed_file: &str, output_dir: &str) -> Result<()> {
+    let config = crate::scraping::ScrapingConfig::new()?;
+    let max_depth = 2; // Default depth for CLI mode
+    crate::crawling::crawl_url(url, processed_file, output_dir, &config, max_depth).await
 }
 
 async fn handle_search() -> Result<()> {
