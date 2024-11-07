@@ -7,6 +7,8 @@ use crate::logging::{self, LogLevel};
 
 pub struct ScrapingConfig {
     api_key: String,
+    premium_proxy: bool,
+    stealth_proxy: bool,
 }
 
 impl ScrapingConfig {
@@ -14,11 +16,25 @@ impl ScrapingConfig {
         dotenv().ok();
         let api_key = env::var("SCRAPING_BEE_API_KEY")
             .context("SCRAPING_BEE_API_KEY must be set in environment")?;
-        Ok(Self { api_key })
+        Ok(Self { 
+            api_key,
+            premium_proxy: true,
+            stealth_proxy: false,
+        })
     }
 
     pub fn with_key(api_key: String) -> Self {
-        Self { api_key } 
+        Self { 
+            api_key,
+            premium_proxy: true,
+            stealth_proxy: false,
+        }
+    }
+
+    pub fn with_stealth_mode(mut self) -> Self {
+        self.stealth_proxy = true;
+        self.premium_proxy = false;
+        self
     }
 }
 
@@ -32,51 +48,79 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
     
     let client = reqwest::Client::new();
     
+    // Build parameters based on config
+    let mut params = vec![
+        ("api_key", config.api_key.clone()),
+        ("url", url.to_string()),
+        ("render_js", "true".to_string()),
+        ("block_ads", "true".to_string()),
+    ];
+
+    if config.premium_proxy {
+        params.push(("premium_proxy", "true".to_string()));
+    }
+
+    if config.stealth_proxy {
+        params.push(("stealth_proxy", "true".to_string()));
+    }
+
     logging::log(LogLevel::Info, "Building ScrapingBee API URL").await?;
     let api_url = Url::parse_with_params(
         "https://app.scrapingbee.com/api/v1/", 
-        &[
-            ("api_key", &config.api_key),
-            ("url", &url.to_string()),
-            ("render_js", &String::from("true")), // Disable JS rendering to save credits
-            ("block_ads", &String::from("true")),  // Block ads  
-            ("block_resources", &String::from("true")), // Block images/CSS to speed up request
-        ]
+        &params
     ).context("Failed to build API URL")?;
 
-    logging::log(LogLevel::Info, "Sending request to ScrapingBee API").await?;
-    let response = client.get(api_url)
-        .send()
-        .await
-        .context("Failed to send request to ScrapingBee")?;
+    // Add retry logic
+    let mut attempts = 0;
+    let max_attempts = 3;
 
-    let status = response.status();
-    let text = response.text().await.context("Failed to get response text")?;
+    while attempts < max_attempts {
+        logging::log(LogLevel::Info, &format!("Attempt {} of {}", attempts + 1, max_attempts)).await?;
+        
+        match client.get(api_url.clone()).send().await {
+            Ok(response) => {
+                let status = response.status();
+                let text = response.text().await.context("Failed to get response text")?;
 
-    if !status.is_success() {
-        let error_msg = format!(
-            "ScrapingBee API error: {} - {}", 
-            status, text
-        );
-        logging::log(LogLevel::Error, &error_msg).await?;
-        return Err(anyhow::anyhow!(error_msg));
-    }
+                if status.is_success() {
+                    // Try to parse as JSON first
+                    match serde_json::from_str::<ScrapingBeeResponse>(&text) {
+                        Ok(scraped) => return Ok(scraped.body),
+                        Err(_) => {
+                            // If JSON parsing fails, check if we got HTML directly
+                            if text.trim().starts_with("<") {
+                                return Ok(text);
+                            }
+                        }
+                    }
+                }
 
-    logging::log(LogLevel::Info, "Successfully received response from ScrapingBee").await?;
+                // If we got here, something went wrong
+                logging::log(LogLevel::Warning, &format!(
+                    "ScrapingBee API error: {} - {}", 
+                    status, text
+                )).await?;
 
-    // Try to parse as JSON first
-    match serde_json::from_str::<ScrapingBeeResponse>(&text) {
-        Ok(scraped) => Ok(scraped.body),
-        Err(e) => {
-            // If JSON parsing fails, check if we got HTML directly
-            if text.trim().starts_with("<") {
-                Ok(text)
-            } else {
-                logging::log(LogLevel::Error, &format!("Failed to parse response: {}", e)).await?;
-                Err(anyhow::anyhow!("Failed to parse ScrapingBee response"))
+                // If we're not using stealth mode yet and got a 403/captcha, try stealth mode
+                if (status == 403 || text.contains("captcha")) && !config.stealth_proxy {
+                    logging::log(LogLevel::Info, "Switching to stealth mode").await?;
+                    return scrape_url(url, &config.clone().with_stealth_mode()).await;
+                }
+            }
+            Err(e) => {
+                logging::log(LogLevel::Error, &format!("Request failed: {}", e)).await?;
             }
         }
+
+        attempts += 1;
+        if attempts < max_attempts {
+            // Add exponential backoff
+            let delay = std::time::Duration::from_secs(2u64.pow(attempts as u32));
+            tokio::time::sleep(delay).await;
+        }
     }
+
+    Err(anyhow::anyhow!("Failed to scrape URL after {} attempts", max_attempts))
 }
 
 pub async fn read_unprocessed_urls(urls_path: &str, processed_path: &str) -> Result<Vec<String>> {

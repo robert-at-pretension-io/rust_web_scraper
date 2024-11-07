@@ -41,13 +41,30 @@ pub async fn crawl_url(
         
         match scrape_url(&url, config).await {
             Ok(html) => {
-                // Process the content
-                if let Ok(processed) = ai::process_html_content(&html, &url).await {
-                    // Save markdown file
-                    let output_path = Path::new(output_dir).join(&processed.filename);
-                    fs::write(&output_path, &processed.content).await?;
-                    mark_url_processed(&url, processed_file).await?;
-                    println!("Processed {} -> {}", url, processed.filename);
+                match ai::process_html_content(&html, &url).await {
+                    Ok(processed) => {
+                        // Save markdown file
+                        let output_path = Path::new(output_dir).join(&processed.filename);
+                        fs::write(&output_path, &processed.content).await?;
+                        mark_url_processed(&url, processed_file).await?;
+                        println!("Processed {} -> {}", url, processed.filename);
+                    },
+                    Err(e) => {
+                        log(LogLevel::Error, &format!(
+                            "Failed to process content for {}: {}", url, e
+                        )).await?;
+                        continue;
+                    }
+                }
+            }
+            Err(e) => {
+                log(LogLevel::Error, &format!(
+                    "Failed to scrape {}: {}. Skipping URL.", url, e
+                )).await?;
+                
+                // Mark URL as processed to avoid retrying
+                mark_url_processed(&url, processed_file).await?;
+                continue;
                     
                     // Extract and queue new URLs if not at max depth
                     if depth < max_depth {
