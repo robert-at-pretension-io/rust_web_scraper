@@ -1,6 +1,9 @@
 use anyhow::Result;
 use regex::Regex;
 use url::Url;
+use crate::crawling::url_filter::UrlFilter;
+
+pub mod url_filter;
 use crate::scraping::{ScrapingConfig, scrape_url, mark_url_processed};
 use crate::ai;
 use std::collections::HashSet;
@@ -17,6 +20,7 @@ pub async fn crawl_url(
     max_depth: usize,
     purpose: &str,
 ) -> Result<()> {
+    let mut url_filter = UrlFilter::new("disallow_urls.txt").await?;
     log(LogLevel::Info, &format!("Starting crawl from {} with purpose: {}", start_url, purpose)).await?;
     let mut visited = HashSet::new();
     let mut to_visit = vec![(start_url.to_string(), 0)];
@@ -29,7 +33,7 @@ pub async fn crawl_url(
     }).await?;
 
     while let Some((url, depth)) = to_visit.pop() {
-        if depth > max_depth || visited.contains(&url) {
+        if depth > max_depth || visited.contains(&url) || !url_filter.is_allowed(&url) {
             continue;
         }
         
@@ -48,9 +52,21 @@ pub async fn crawl_url(
                     // Extract and queue new URLs if not at max depth
                     if depth < max_depth {
                         let new_urls = extract_urls(&html, &url)?;
-                        for new_url in new_urls {
-                            if !visited.contains(&new_url) {
-                                to_visit.push((new_url, depth + 1));
+                        
+                        // Let user select which URLs to crawl
+                        let selected_urls = url_filter.select_urls(&new_urls).await?;
+                        
+                        // Add unselected URLs to disallow list
+                        for url in new_urls.iter() {
+                            if !selected_urls.contains(&url) {
+                                url_filter.add_to_disallow(url, "disallow_urls.txt").await?;
+                            }
+                        }
+                        
+                        // Queue selected URLs
+                        for url in selected_urls {
+                            if !visited.contains(url) {
+                                to_visit.push((url.clone(), depth + 1));
                             }
                         }
                     }
