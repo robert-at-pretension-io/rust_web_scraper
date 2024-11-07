@@ -1,4 +1,9 @@
-use anyhow::Result;
+use anyhow::{Result, Context};
+use async_openai::{
+    types::{CreateChatCompletionRequestArgs, ChatCompletionRequestSystemMessageArgs,
+            ChatCompletionRequestUserMessageArgs},
+    Client,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,6 +14,7 @@ use tokio::fs;
 pub struct DocumentMetadata {
     pub filename: String,
     pub title: String,
+    pub description: String,
     pub source_url: String,
     pub last_updated: DateTime<Utc>,
     pub purpose: String,
@@ -67,6 +73,74 @@ impl ProjectMetadata {
     pub fn get_document(&self, filename: &str) -> Option<&DocumentMetadata> {
         self.documents.iter().find(|d| d.filename == filename)
     }
+
+    pub fn get_context_for_processing(&self) -> String {
+        let mut context = String::new();
+        
+        // Add project purpose if available
+        if let Some(purpose) = self.custom_metadata.get("purpose") {
+            context.push_str(&format!("Project Purpose: {}\n\n", purpose));
+        }
+        
+        // Add summaries of existing documents
+        if !self.documents.is_empty() {
+            context.push_str("Existing Documentation Context:\n");
+            for doc in &self.documents {
+                if doc.success {  // Only include successfully processed documents
+                    context.push_str(&format!(
+                        "- {}: {}\n",
+                        doc.title,
+                        doc.description
+                    ));
+                }
+            }
+        }
+        
+        context
+    }
+}
+
+pub async fn generate_description(
+    content: &str,
+    title: &str,
+    purpose: &str,
+    ai_model: &str,
+) -> Result<String> {
+    let client = Client::new();
+    
+    let prompt = format!(
+        "You are a technical documentation expert. Given the following content from '{}', \
+        create a clear, concise description (less than 10 sentences) that explains what this document covers. \
+        Consider that this documentation is being collected for the purpose of: '{}'. \
+        Focus on the key topics and their relevance to this purpose.\n\n\
+        Content:\n{}\n\n\
+        Return only the description, nothing else.",
+        title,
+        purpose,
+        content
+    );
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .model(ai_model)
+        .messages([
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content("You are a technical documentation expert creating concise document descriptions.")
+                .build()?
+                .into(),
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(prompt)
+                .build()?
+                .into(),
+        ])
+        .build()?;
+
+    let response = client.chat().create(request).await?;
+    let description = response.choices.first()
+        .context("No response from OpenAI")?
+        .message.content.clone()
+        .context("No content in response")?;
+
+    Ok(description.trim().to_string())
 }
 
 pub async fn create_document_metadata(
@@ -79,16 +153,21 @@ pub async fn create_document_metadata(
     processing_time: f64,
     success: bool,
     error_message: Option<String>,
-) -> DocumentMetadata {
-    // Calculate word count
+) -> Result<DocumentMetadata> {
     let word_count = content.split_whitespace().count();
-
-    // Extract potential tags from content (e.g., from headers)
     let tags = extract_tags_from_content(content);
+    
+    // Generate description using AI
+    let description = if success {
+        generate_description(content, &title, &purpose, &ai_model).await?
+    } else {
+        "Processing failed - no description available".to_string()
+    };
 
-    DocumentMetadata {
+    Ok(DocumentMetadata {
         filename,
         title,
+        description,
         source_url,
         last_updated: Utc::now(),
         purpose,
@@ -99,7 +178,7 @@ pub async fn create_document_metadata(
         success,
         error_message,
         custom_metadata: HashMap::new(),
-    }
+    })
 }
 
 fn extract_tags_from_content(content: &str) -> Vec<String> {
