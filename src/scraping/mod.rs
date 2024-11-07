@@ -54,16 +54,19 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
         let mut params = vec![
             ("api_key", config.api_key.clone()),
             ("url", url.to_string()),
-            ("render_js", "true".to_string()),  // Always enable JavaScript
+            ("render_js", "true".to_string()),  // Always render JavaScript
             ("premium_proxy", "true".to_string()),  // Always use premium proxy
             ("block_ads", "true".to_string()),
+            ("block_resources", "false".to_string()),  // Allow resources to load
+            ("wait_browser", "networkidle0".to_string()),  // Wait until network is idle
+            ("wait", "2000".to_string()),  // Additional 2s wait for dynamic content
         ];
 
         if config.stealth_proxy {
             params.push(("stealth_proxy", "true".to_string()));
         }
 
-        logging::log(LogLevel::Info, "Building ScrapingBee API URL").await?;
+        logging::log(LogLevel::Info, "Building ScrapingBee API URL with premium settings").await?;
         let api_url = Url::parse_with_params(
             "https://app.scrapingbee.com/api/v1/", 
             &params
