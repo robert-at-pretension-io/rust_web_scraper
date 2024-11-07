@@ -5,6 +5,7 @@ use std::env;
 use dotenv::dotenv;
 use crate::logging::{self, LogLevel};
 
+#[derive(Clone)]
 pub struct ScrapingConfig {
     api_key: String,
     premium_proxy: bool,
@@ -104,7 +105,10 @@ pub async fn scrape_url(url: &str, config: &ScrapingConfig) -> Result<String> {
                 // If we're not using stealth mode yet and got a 403/captcha, try stealth mode
                 if (status == 403 || text.contains("captcha")) && !config.stealth_proxy {
                     logging::log(LogLevel::Info, "Switching to stealth mode").await?;
-                    return scrape_url(url, &config.clone().with_stealth_mode()).await;
+                    let mut stealth_config = config.clone();
+                    stealth_config.stealth_proxy = true;
+                    stealth_config.premium_proxy = false;
+                    return scrape_url(url, &stealth_config).await;
                 }
             }
             Err(e) => {
