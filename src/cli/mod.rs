@@ -19,6 +19,9 @@ pub async fn interactive_mode() -> Result<()> {
 }
 
 async fn handle_crawl_interactive() -> Result<()> {
+    let purpose = Text::new("What is the purpose of this crawl? (e.g. 'Gather documentation about WebSocket APIs')")
+        .prompt()?;
+    
     let url = Text::new("Enter the starting URL:").prompt()?;
     
     let processed_file = Text::new("Enter the processed URLs file path:")
@@ -35,7 +38,7 @@ async fn handle_crawl_interactive() -> Result<()> {
         .parse::<usize>()?;
 
     let config = crate::scraping::ScrapingConfig::new()?;
-    crate::crawling::crawl_url(&url, &processed_file, &output_dir, &config, max_depth).await?;
+    crate::crawling::crawl_url(&url, &processed_file, &output_dir, &config, max_depth, &purpose).await?;
 
     Ok(())
 }
@@ -43,7 +46,8 @@ async fn handle_crawl_interactive() -> Result<()> {
 pub async fn handle_crawl(url: &str, processed_file: &str, output_dir: &str) -> Result<()> {
     let config = crate::scraping::ScrapingConfig::new()?;
     let max_depth = 2; // Default depth for CLI mode
-    crate::crawling::crawl_url(url, processed_file, output_dir, &config, max_depth).await
+    let purpose = "General documentation gathering"; // Default purpose for CLI mode
+    crate::crawling::crawl_url(url, processed_file, output_dir, &config, max_depth, purpose).await
 }
 
 async fn handle_search() -> Result<()> {
