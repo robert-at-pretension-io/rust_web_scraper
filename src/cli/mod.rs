@@ -160,7 +160,7 @@ async fn handle_scrape() -> Result<()> {
                             None,
                         ).await;
                         
-                        project_metadata.add_document(doc_metadata);
+                        project_metadata.add_document(doc_metadata?);
                         project_metadata.save(&output_dir).await?;
                         
                         crate::scraping::mark_url_processed(&url, &processed_file).await?;

@@ -34,6 +34,7 @@ pub struct ProjectMetadata {
     pub created_at: DateTime<Utc>,
     pub last_updated: DateTime<Utc>,
     pub documents: Vec<DocumentMetadata>,
+    pub custom_metadata: HashMap<String, String>,
 }
 
 impl ProjectMetadata {
@@ -43,6 +44,7 @@ impl ProjectMetadata {
             created_at: Utc::now(),
             last_updated: Utc::now(),
             documents: Vec::new(),
+            custom_metadata: HashMap::new(),
         }
     }
 
