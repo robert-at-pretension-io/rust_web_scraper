@@ -9,6 +9,11 @@ use slug::slugify;
 use crate::search::models::SearchResult;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct AiConfig {
+    pub model: String,
+    pub purpose: String,
+}
+
 pub struct ProcessedContent {
     pub filename: String,
     pub content: String,
@@ -46,12 +51,10 @@ async fn get_openai_response(content: &str, system_prompt: &str, model: &str) ->
     Ok(content)
 }
 
-async fn get_markdown_content(html: &str) -> Result<String> {
-    // Convert HTML to plain text first to reduce size
+async fn get_markdown_content(html: &str, config: &AiConfig) -> Result<String> {
     let plain_text = html2text::from_read(html.as_bytes(), 80);
     let mut final_content = String::new();
 
-    // Split content into chunks
     let text_chars: Vec<char> = plain_text.chars().collect();
     let chunks: Vec<String> = text_chars
         .chunks(MAX_CHUNK_SIZE)
@@ -62,19 +65,25 @@ async fn get_markdown_content(html: &str) -> Result<String> {
         let prompt = if chunks.len() > 1 {
             format!(
                 "You are processing part {} of {} of a document. \
-                Convert this text content into clean markdown format. \
+                Purpose: {}. \
+                Convert this text content into clean markdown format, focusing on content relevant to the purpose. \
                 Preserve the important content while improving readability. \
                 Return ONLY the markdown content, nothing else.",
                 i + 1,
-                chunks.len()
+                chunks.len(),
+                config.purpose
             )
         } else {
-            "Convert this text content into clean markdown format. \
-            Preserve the important content while improving readability. \
-            Return ONLY the markdown content, nothing else.".to_string()
+            format!(
+                "Convert this text content into clean markdown format. \
+                Purpose: {}. \
+                Focus on content relevant to the purpose while preserving important information. \
+                Return ONLY the markdown content, nothing else.",
+                config.purpose
+            )
         };
 
-        let content = get_openai_response(chunk, &prompt, "gpt-4o-mini").await?;
+        let content = get_openai_response(chunk, &prompt, &config.model).await?;
         final_content.push_str(&content);
         final_content.push_str("\n\n");
     }
@@ -82,14 +91,16 @@ async fn get_markdown_content(html: &str) -> Result<String> {
     Ok(final_content.trim().to_string())
 }
 
-async fn get_filename(html: &str) -> Result<String> {
-    // Convert HTML to plain text first
-    let plain_text = html2text::from_read(html.as_bytes(), 80);
-    
-    let prompt = "Based on the text content provided, suggest a descriptive filename (without extension) \
-        that summarizes what this content is about. Return ONLY the filename, nothing else.";
+async fn get_filename(markdown: &str, config: &AiConfig) -> Result<String> {
+    let prompt = format!(
+        "Based on the markdown content provided and considering the purpose '{}', \
+        suggest a descriptive filename (without extension) that summarizes what this content is about. \
+        The filename should reflect both the content and its relevance to the purpose. \
+        Return ONLY the filename, nothing else.",
+        config.purpose
+    );
 
-    let filename = get_openai_response(&plain_text, prompt, "gpt-4o").await?;
+    let filename = get_openai_response(markdown, &prompt, &config.model).await?;
     Ok(slugify(&filename.trim()))
 }
 
@@ -185,15 +196,16 @@ pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Ve
     validate_json_array(&response).await
 }
 
-pub async fn process_html_content(html: &str, url: &str) -> Result<ProcessedContent> {
-    // Get markdown content and filename in parallel
-    let (markdown, filename) = tokio::join!(
-        get_markdown_content(html),
-        get_filename(html)
-    );
-
-    let markdown = markdown?;
-    let filename = format!("{}.md", filename?);
+pub async fn process_html_content(
+    html: &str, 
+    url: &str,
+    config: &AiConfig,
+) -> Result<ProcessedContent> {
+    // First get markdown content
+    let markdown = get_markdown_content(html, config).await?;
+    
+    // Then get filename based on the markdown
+    let filename = format!("{}.md", get_filename(&markdown, config).await?);
 
     Ok(ProcessedContent {
         filename,

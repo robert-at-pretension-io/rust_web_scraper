@@ -16,6 +16,10 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
+    /// AI model to use for processing (default: gpt-4o-mini)
+    #[arg(long, default_value = "gpt-4o-mini")]
+    ai_model: String,
+
     #[command(subcommand)]
     command: Commands,
 }
