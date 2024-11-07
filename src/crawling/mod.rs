@@ -48,24 +48,8 @@ pub async fn crawl_url(
                         fs::write(&output_path, &processed.content).await?;
                         mark_url_processed(&url, processed_file).await?;
                         println!("Processed {} -> {}", url, processed.filename);
-                    },
-                    Err(e) => {
-                        log(LogLevel::Error, &format!(
-                            "Failed to process content for {}: {}", url, e
-                        )).await?;
-                        continue;
-                    }
-                }
-            }
-            Err(e) => {
-                log(LogLevel::Error, &format!(
-                    "Failed to scrape {}: {}. Skipping URL.", url, e
-                )).await?;
-                
-                // Mark URL as processed to avoid retrying
-                mark_url_processed(&url, processed_file).await?;
-                continue;
-                    
+
+
                     // Extract and queue new URLs if not at max depth
                     if depth < max_depth {
                         let new_urls = extract_urls(&html, &url)?;
@@ -87,13 +71,30 @@ pub async fn crawl_url(
                             }
                         }
                     }
+                    },
+                    Err(e) => {
+                        log(LogLevel::Error, &format!(
+                            "Failed to process content for {}: {}", url, e
+                        )).await?;
+                        continue;
+                    }
                 }
             }
             Err(e) => {
-                println!("Failed to scrape {}: {}", url, e);
+                log(LogLevel::Error, &format!(
+                    "Failed to scrape {}: {}. Skipping URL.", url, e
+                )).await?;
+                
+                // Mark URL as processed to avoid retrying
+                mark_url_processed(&url, processed_file).await?;
+                continue;
             }
         }
-    }
+                    
+                
+            
+        }
+    
 
     Ok(())
 }
