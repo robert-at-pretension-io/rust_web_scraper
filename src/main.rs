@@ -6,6 +6,7 @@ mod models;
 mod search;
 mod cli;
 mod crawling;
+mod utils;
 
 use anyhow::{Result, Context};
 use std::path::Path;

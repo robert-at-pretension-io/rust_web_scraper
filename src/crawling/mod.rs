@@ -6,6 +6,8 @@ use crate::ai;
 use std::collections::HashSet;
 use tokio::fs;
 use std::path::Path;
+use crate::utils::with_spinner;
+use crate::logging::{log, LogLevel};
 
 pub async fn crawl_url(
     start_url: &str, 
@@ -13,12 +15,18 @@ pub async fn crawl_url(
     output_dir: &str,
     config: &ScrapingConfig,
     max_depth: usize,
+    purpose: &str,
 ) -> Result<()> {
+    log(LogLevel::Info, &format!("Starting crawl from {} with purpose: {}", start_url, purpose)).await?;
     let mut visited = HashSet::new();
     let mut to_visit = vec![(start_url.to_string(), 0)];
     
     // Create output directory if it doesn't exist
-    fs::create_dir_all(output_dir).await?;
+    with_spinner("Creating output directory...", async {
+        fs::create_dir_all(output_dir).await?;
+        log(LogLevel::Info, "Output directory created/verified").await?;
+        Ok::<_, anyhow::Error>(())
+    }).await?;
 
     while let Some((url, depth)) = to_visit.pop() {
         if depth > max_depth || visited.contains(&url) {
