@@ -203,7 +203,7 @@ pub async fn process_html_content(
     html: &str, 
     url: &str,
     config: &AiConfig,
-    project_metadata: &ProjectMetadata,
+    _project_metadata: &ProjectMetadata,
 ) -> Result<ProcessedContent> {
     let start_time = std::time::Instant::now();
     

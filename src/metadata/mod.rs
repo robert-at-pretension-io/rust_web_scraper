@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use tokio::fs;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DocumentMetadata {
     pub filename: String,
     pub title: String,
@@ -28,7 +28,7 @@ pub struct DocumentMetadata {
     pub custom_metadata: HashMap<String, String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProjectMetadata {
     pub project_name: String,
     pub created_at: DateTime<Utc>,
