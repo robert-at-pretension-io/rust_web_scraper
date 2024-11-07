@@ -19,6 +19,11 @@ pub async fn interactive_mode() -> Result<()> {
 }
 
 async fn handle_crawl_interactive() -> Result<()> {
+    // Ask for AI model first
+    let ai_model = Text::new("Enter AI model to use:")
+        .with_default("gpt-4o-mini")
+        .prompt()?;
+    
     let purpose = Text::new("What is the purpose of this crawl? (e.g. 'Gather documentation about WebSocket APIs')")
         .prompt()?;
     
@@ -37,6 +42,9 @@ async fn handle_crawl_interactive() -> Result<()> {
         .prompt()?
         .parse::<usize>()?;
 
+    // Set the AI model in environment for the crawl process
+    std::env::set_var("AI_MODEL", ai_model);
+
     let config = crate::scraping::ScrapingConfig::new()?;
     crate::crawling::crawl_url(&url, &processed_file, &output_dir, &config, max_depth, &purpose).await?;
 
@@ -47,6 +55,11 @@ pub async fn handle_crawl(url: &str, processed_file: &str, output_dir: &str) -> 
     let config = crate::scraping::ScrapingConfig::new()?;
     let max_depth = 2; // Default depth for CLI mode
     let purpose = "General documentation gathering"; // Default purpose for CLI mode
+    
+    // Use environment variable if set, otherwise use default
+    let ai_model = std::env::var("AI_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+    std::env::set_var("AI_MODEL", ai_model);
+    
     crate::crawling::crawl_url(url, processed_file, output_dir, &config, max_depth, purpose).await
 }
 
