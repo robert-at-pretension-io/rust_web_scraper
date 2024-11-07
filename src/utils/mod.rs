@@ -33,8 +33,8 @@ pub async fn with_spinner<F, T>(message: &str, future: F) -> T
 where
     F: std::future::Future<Output = T>,
 {
-    let message = message.to_string(); // Clone message for the spinner task
-    let (tx, rx) = tokio::sync::oneshot::channel();
+    let message = message.to_string();
+    let (tx, mut rx) = tokio::sync::oneshot::channel();
     
     // Spawn spinner task
     let spinner_handle = tokio::spawn(async move {
@@ -43,7 +43,11 @@ where
             spinner.tick();
             tokio::select! {
                 _ = tokio::time::sleep(Duration::from_millis(80)) => continue,
-                _ = rx => break,
+                result = &mut rx => {
+                    if result.is_ok() {
+                        break;
+                    }
+                }
             }
         }
         print!("\r✓ {}\n", message);
