@@ -124,6 +124,39 @@ async fn coerce_to_json_array(content: &str) -> Result<String> {
     get_openai_response(content, &prompt, "gpt-4o-mini").await
 }
 
+pub async fn evaluate_urls_for_crawl(urls: &[String], base_url: &str, purpose: &str) -> Result<Vec<String>> {
+    let urls_json = serde_json::to_string(urls)?;
+    let system_prompt = format!(
+        "You are a web crawler assistant helping to evaluate which URLs to crawl next. \
+        Base URL: {}\n\
+        Crawl Purpose: {}\n\
+        Evaluate the URLs and select only those that seem relevant to the stated purpose. \
+        Consider factors like:\n\
+        - URL path relevance to the purpose\n\
+        - Whether the URL likely contains documentation/relevant content\n\
+        - If the URL stays within the relevant section of the site\n\
+        Return ONLY a JSON array of selected URLs, nothing else.", 
+        base_url, purpose
+    );
+
+    // First attempt
+    let mut response = get_openai_response(&urls_json, &system_prompt, "gpt-4o-mini").await?;
+    
+    // Try up to 3 times to get a valid JSON array
+    for _ in 0..2 {
+        match validate_json_array(&response).await {
+            Ok(urls) => return Ok(urls),
+            Err(_) => {
+                // Try to coerce the response into a JSON array
+                response = coerce_to_json_array(&response).await?;
+            }
+        }
+    }
+
+    // Final attempt to validate
+    validate_json_array(&response).await
+}
+
 pub async fn select_urls(results: &[SearchResult], num_urls: usize) -> Result<Vec<String>> {
     let results_json = serde_json::to_string(results)?;
     
