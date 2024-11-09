@@ -1,0 +1,16 @@
+https://platform.openai.com/favicon-dashboard.png
+https://platform.openai.com/favicon-dashboard.svg
+https://cdn.openai.com/
+https://owz3qoiija-dsn.algolia.net/
+https://cdn.openai.com/common/fonts/soehne/soehne-buch.woff2
+https://cdn.openai.com/common/fonts/soehne/soehne-kraftig.woff2
+https://platform.openai.com/manifest.json
+https://platform.openai.com/static/D0H1xYdSBk.css
+https://platform.openai.com/favicon-dashboard.png
+https://platform.openai.com/favicon-dashboard.svg
+https://cdn.openai.com/
+https://owz3qoiija-dsn.algolia.net/
+https://cdn.openai.com/common/fonts/soehne/soehne-buch.woff2
+https://cdn.openai.com/common/fonts/soehne/soehne-kraftig.woff2
+https://platform.openai.com/manifest.json
+https://platform.openai.com/static/D0H1xYdSBk.css
