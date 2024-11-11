@@ -131,3 +131,156 @@ MIT License
 - OpenAI for AI processing
 - SerpAPI for search capabilities
 - ScrapingBee for web scraping
+## Project Artifacts and Directories
+
+### Output Directory (`output/`)
+The main directory where processed documentation and metadata are stored.
+
+#### Structure:
+- `*.md` - Processed markdown files
+  - Filenames are AI-generated based on content
+  - Contains formatted documentation with consistent structure
+  - Includes metadata headers and proper markdown formatting
+- `metadata.json` - Project-wide metadata file containing:
+  - Document summaries
+  - Processing timestamps
+  - Source URLs
+  - AI model information
+  - Custom metadata fields
+  - Processing success/failure status
+
+### Data Directory (`data/`)
+Contains persistent storage and database files.
+
+#### Contents:
+- `data.db` - SQLite database containing:
+  - Documents table (processed content)
+  - Search queries history
+  - Search results
+  - Application logs
+  - Processing metadata
+
+### Logs Directory (`logs/`)
+Created automatically to store various log files.
+
+#### Log Files:
+- `app.log` - General application logs
+  - Processing status
+  - Error messages
+  - System events
+  - Timestamps for all operations
+- `openai.log` - AI interaction logs
+  - Prompts sent to OpenAI
+  - Responses received
+  - Processing times
+  - Model usage
+
+### Text Files
+
+#### URL Management
+- `urls.txt`
+  - Input file for URLs to process
+  - Can be manually created or generated from search
+  - One URL per line
+  - Used by scrape command
+
+- `processed_urls.txt`
+  - Tracks successfully processed URLs
+  - Prevents duplicate processing
+  - Automatically updated during operations
+  - Used for resume capability
+
+- `disallow_urls.txt`
+  - URLs to skip during crawling
+  - Can be manually edited
+  - Used for filtering unwanted domains/paths
+  - Automatically updated based on user selections
+
+### Temporary Files
+The script may create temporary files during operation:
+
+- `.tmp_*` files for content processing
+- Cache files for API responses
+- Temporary database journal files
+- Lock files during concurrent operations
+
+### File Formats
+
+#### Markdown Files
+```markdown
+# Document Title
+
+- Source: [Original URL]
+- Last Updated: [Timestamp]
+- Purpose: [Processing Purpose]
+- AI Model: [Model Used]
+
+[Processed Content]
+```
+
+#### metadata.json
+```json
+{
+  "project_name": "Documentation Project",
+  "created_at": "2023-01-01T00:00:00Z",
+  "last_updated": "2023-01-01T00:00:00Z",
+  "documents": [
+    {
+      "filename": "example-doc.md",
+      "title": "Example Documentation",
+      "description": "Brief description",
+      "source_url": "https://example.com/docs",
+      "last_updated": "2023-01-01T00:00:00Z",
+      "purpose": "Documentation purpose",
+      "ai_model": "gpt-4o-mini",
+      "word_count": 1000,
+      "tags": ["api", "documentation"],
+      "processing_time": 2.5,
+      "success": true,
+      "error_message": null,
+      "custom_metadata": {}
+    }
+  ],
+  "custom_metadata": {}
+}
+```
+
+### Storage Considerations
+
+- The `output/` directory can grow large with many documents
+- Log files are not automatically rotated
+- The SQLite database will grow with usage
+- Consider periodic cleanup of:
+  - Old log files
+  - Temporary files
+  - Processed URLs for completed projects
+
+### Backup Recommendations
+
+Important files to backup:
+1. `output/metadata.json`
+2. `data/data.db`
+3. Custom URL lists
+4. Configuration files
+
+### File Permissions
+
+The script needs read/write access to:
+- Current directory
+- `output/` directory
+- `data/` directory
+- `logs/` directory
+- All `.txt` files
+
+### Clean Up
+
+To clean up all artifacts:
+```bash
+rm -rf output/*
+rm -rf logs/*
+rm data/data.db
+rm processed_urls.txt
+rm urls.txt
+```
+
+Keep `output/.gitkeep` and essential configuration files.
